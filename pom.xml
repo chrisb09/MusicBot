@@ -47,12 +47,12 @@
         <dependency>
             <groupId>net.dv8tion</groupId>
             <artifactId>JDA</artifactId>
-            <version>4.4.1_353</version>
+            <version>6.1.1</version>
         </dependency>
 	<dependency>
-		<groupId>com.github.Nagami-Yukki</groupId>
-		<artifactId>JDA-Utilities</artifactId>
-		<version>1.0</version>
+		<groupId>com.github.Chew</groupId>
+		<artifactId>JDA-Chewtils</artifactId>
+		<version>fix~components-v2-SNAPSHOT</version>
 	</dependency>
 
         <!-- Music Dependencies -->
