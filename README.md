@@ -8,7 +8,10 @@ If you want to join the demo server permanently, use this link: [https://discord
 
 # This fork
 
-Essentially, this is just a merge of three pull requests:
+We had to update to JDA 6, switch to jda-chewtils to make the bot work again.
+Also, we somewhat regularly bump  [lavaplayer](https://mvnrepository.com/artifact/dev.arbjerg/lavaplayer)/[lavalink](https://maven.lavalink.dev/#/releases/dev/lavalink/youtube/common) to their new versions. I will try to update this automatically in the future.
+
+Additionally, this fork includes the following PRs from other people:
 
 ### Support for logging into your (burner) youtube account:
 
@@ -19,8 +22,6 @@ Essentially, this is just a merge of three pull requests:
 
 ### Add YouTube PO token & IP rotation
 https://github.com/jagrosh/MusicBot/pull/1772
-
-And I've now bumped the versions up to the newest [lavaplayer](https://mvnrepository.com/artifact/dev.arbjerg/lavaplayer)/[lavalink](https://maven.lavalink.dev/#/releases/dev/lavalink/youtube/common) versions. I will try to update this automatically in the future.
 
 
 ### For PO_Tokens: In your bot folder, edit "config.txt" and add
@@ -33,6 +34,12 @@ To get po_token and visitor_data, use [youtube-trusted-session-generator](https:
 
 
 If you have problems with this fork, you could also check out [this other fork](https://github.com/SeVile/MusicBot).
+
+## Requirements for 0.5+ and above
+
+Since we updated JDA from version 4 to 6 to fix various issues, we had to enable the MESSAGE_CONTENT intent. If you let your bot join more than 100 servers(guilds), you now need to enable this intent in the [Discord Developer Portal](https://discord.com/developers/applications).
+More information can be found in the [JDA documentation](https://jda.wiki/using-jda/gateway-intents-and-member-cache-policy/).
+Note, however, that this is a privileged intent and will require a valid use-case for your bot to be verified in over 75 servers (it will only show up in the portal when on at least 76 servers according to the documentation).
 
 ## Easy deployment via docker
 
