@@ -50,9 +50,10 @@
             <version>6.1.1</version>
         </dependency>
 	<dependency>
-		<groupId>com.github.Chew</groupId>
+		<groupId>com.github.chrisb09</groupId>
 		<artifactId>JDA-Chewtils</artifactId>
-		<version>fix~components-v2-SNAPSHOT</version>
+		<!-- <version>fix~components-v2-SNAPSHOT</version> -->
+        <version>jda-6.1.1-SNAPSHOT</version>
 	</dependency>
 
         <!-- Music Dependencies -->
