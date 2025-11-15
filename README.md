@@ -45,7 +45,7 @@ Note, however, that this is a privileged intent and will require a valid use-cas
 
 Additionally, i thought a corresponding docker image would make things better:
 
-The image can be found on [dockerhub](https://hub.docker.com/repository/docker/chrisb09/jmusicbot/general)
+The image can be found on [dockerhub](https://hub.docker.com/r/chrisb09/jmusicbot)
 
 Docker-compose:
 
