@@ -122,6 +122,7 @@ public class JMusicBot
                     .enableCache(CacheFlag.MEMBER_OVERRIDES, CacheFlag.VOICE_STATE)
                     .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.ONLINE_STATUS)
                     .enableIntents(GatewayIntent.MESSAGE_CONTENT)
+                    .enableIntents(GatewayIntent.GUILD_EXPRESSIONS, GatewayIntent.SCHEDULED_EVENTS)
                     .setActivity(config.isGameNone() ? null : Activity.playing("loading..."))
                     .setStatus(config.getStatus()==OnlineStatus.INVISIBLE || config.getStatus()==OnlineStatus.OFFLINE 
                             ? OnlineStatus.INVISIBLE : OnlineStatus.DO_NOT_DISTURB)
