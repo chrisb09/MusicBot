@@ -28,10 +28,13 @@ import com.jagrosh.jmusicbot.entities.Prompt;
 import com.jagrosh.jmusicbot.gui.GUI;
 import com.jagrosh.jmusicbot.settings.SettingsManager;
 import com.jagrosh.jmusicbot.utils.OtherUtil;
+import moe.kyokobot.libdave.NativeDaveFactory;
+import moe.kyokobot.libdave.jda.LDJDADaveSessionFactory;
 import java.awt.Color;
 import java.util.Arrays;
 import javax.security.auth.login.LoginException;
 import net.dv8tion.jda.api.*;
+import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
@@ -124,6 +127,7 @@ public class JMusicBot
                     .setActivity(config.isGameNone() ? null : Activity.playing("loading..."))
                     .setStatus(config.getStatus()==OnlineStatus.INVISIBLE || config.getStatus()==OnlineStatus.OFFLINE 
                             ? OnlineStatus.INVISIBLE : OnlineStatus.DO_NOT_DISTURB)
+                    .setAudioModuleConfig(createAudioModuleConfig())
                     .addEventListeners(client, waiter, new Listener(bot))
                     .setBulkDeleteSplittingEnabled(true)
                     .build();
@@ -149,6 +153,12 @@ public class JMusicBot
                         + "on https://discord.com/developers/applications/" + jda.getSelfUser().getId() + "/bot");
             }
         }
+        catch(IllegalStateException ex)
+        {
+            prompt.alert(Prompt.Level.ERROR, "JMusicBot", ex.getMessage());
+            LOG.error("Failed to initialize DAVE protocol support", ex);
+            System.exit(1);
+        }
         catch(IllegalArgumentException ex)
         {
             prompt.alert(Prompt.Level.ERROR, "JMusicBot", "Some aspect of the configuration is "
@@ -163,6 +173,22 @@ public class JMusicBot
         }
 
         GetPoTokenAndVisitorData(config.getChromePath(), config.getChromeDriverPath(), config.getChromeHeadless());
+    }
+
+    private static AudioModuleConfig createAudioModuleConfig()
+    {
+        try
+        {
+            NativeDaveFactory.ensureAvailable();
+            LOG.info("Configured DAVE protocol support using libdave-jvm.");
+            return new AudioModuleConfig()
+                    .withDaveSessionFactory(new LDJDADaveSessionFactory(new NativeDaveFactory()));
+        }
+        catch(Throwable ex)
+        {
+            throw new IllegalStateException("Unable to initialize DAVE protocol support via libdave-jvm. "
+                    + "Verify native dependencies are present for this platform (Linux glibc/musl x86_64, Windows x86_64, or macOS).", ex);
+        }
     }
     
     private static CommandClient createCommandClient(BotConfig config, SettingsManager settings, Bot bot)

@@ -8,20 +8,28 @@
 
     <repositories>
         <repository>
+            <id>m2-chew</id>
+            <name>Maven Chewtral</name>
+            <url>https://m2.chew.pro/releases</url>
+        </repository>
+        <repository>
             <id>dv8tion</id>
             <name>m2-dv8tion</name>
             <url>https://m2.dv8tion.net/releases</url>
         </repository>
         <repository>
             <id>central</id>
-            <name>bintray</name>
-            <url>https://jcenter.bintray.com</url>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
         </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
-            <snapshots>
+            <releases>
                 <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
                 <updatePolicy>always</updatePolicy>
             </snapshots>
         </repository>
@@ -47,15 +55,98 @@
         <dependency>
             <groupId>net.dv8tion</groupId>
             <artifactId>JDA</artifactId>
-            <version>6.1.1</version>
+            <version>6.3.1</version>
         </dependency>
-	<dependency>
-		<groupId>com.github.chrisb09</groupId>
-		<artifactId>JDA-Chewtils</artifactId>
-		<!-- <version>fix~components-v2-SNAPSHOT</version> -->
-        <version>jda-6.1.1-SNAPSHOT</version>
-	</dependency>
-
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>adapter-jda</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>impl-jni</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>natives-linux-x86-64</artifactId>
+            <version>0.1.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>natives-linux-musl-x86-64</artifactId>
+            <version>0.1.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>natives-win-x86-64</artifactId>
+            <version>0.1.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>natives-darwin</artifactId>
+            <version>0.1.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+        <groupId>pw.chew</groupId>
+        <artifactId>jda-chewtils-command</artifactId>
+        <version>2.2.1</version>
+        <scope>compile</scope>
+        </dependency>
+        <dependency>
+        <groupId>pw.chew</groupId>
+        <artifactId>jda-chewtils-commons</artifactId>
+        <version>2.2.1</version>
+        <scope>compile</scope>
+        </dependency>
+        <dependency>
+        <groupId>pw.chew</groupId>
+        <artifactId>jda-chewtils-examples</artifactId>
+        <version>2.2.1</version>
+        <scope>compile</scope>
+        </dependency>
+        <dependency>
+        <groupId>pw.chew</groupId>
+        <artifactId>jda-chewtils-menu</artifactId>
+        <version>2.2.1</version>
+        <scope>compile</scope>
+        </dependency>
+        <!-- <dependency>
+            <groupId>com.github.chew.jda-chewtils</groupId>
+            <artifactId>jda-chewtils-command</artifactId>
+            <version>2.2.1</version>
+        </dependency> 
+        <dependency>
+            <groupId>com.github.chew.jda-chewtils</groupId>
+            <artifactId>jda-chewtils-menu</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.chew.jda-chewtils</groupId>
+            <artifactId>jda-chewtils-commons</artifactId>
+            <version>2.2.1</version>
+        </dependency> -->
+<!--
+        <dependency>
+            <groupId>com.github.chew.jda-chewtils</groupId>
+            <artifactId>jda-chewtils-command</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.chew.jda-chewtils</groupId>
+            <artifactId>jda-chewtils-menu</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.chew.jda-chewtils</groupId>
+            <artifactId>jda-chewtils-commons</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+-->
         <!-- Music Dependencies -->
         <dependency>
             <groupId>dev.arbjerg</groupId>

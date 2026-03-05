@@ -41,6 +41,19 @@ Since we updated JDA from version 4 to 6 to fix various issues, we had to enable
 More information can be found in the [JDA documentation](https://jda.wiki/using-jda/gateway-intents-and-member-cache-policy/).
 Note, however, that this is a privileged intent and will require a valid use-case for your bot to be verified in over 75 servers (it will only show up in the portal when on at least 76 servers according to the documentation).
 
+### DAVE / Voice encryption (JDA 6.3+)
+
+Discord requires DAVE for voice on modern API versions (JDA 6.3+).
+This fork uses `libdave-jvm` (`0.1.0`) and configures DAVE during startup.
+
+The shaded jar includes native binaries for:
+- Linux glibc x86_64
+- Linux musl x86_64 (Alpine containers)
+- Windows x86_64
+- macOS (universal)
+
+If you deploy on a different architecture, add the matching `moe.kyokobot.libdave:natives-*` dependency in `pom.xml`.
+
 ## Easy deployment via docker
 
 Additionally, i thought a corresponding docker image would make things better:
