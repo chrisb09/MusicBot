@@ -166,7 +166,7 @@
 	<dependency>
 	    <groupId>com.github.jagrosh</groupId>
 	    <artifactId>JLyrics</artifactId>
-	    <version>master-SNAPSHOT</version>
+	    <version>master</version>
 	</dependency>
         <dependency>
             <groupId>com.dunctebot</groupId>
