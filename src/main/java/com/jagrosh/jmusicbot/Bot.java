@@ -22,6 +22,7 @@ import com.jagrosh.jmusicbot.audio.AloneInVoiceHandler;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.NowplayingHandler;
 import com.jagrosh.jmusicbot.audio.PlayerManager;
+import com.jagrosh.jmusicbot.audio.StatusMessageHandler;
 import com.jagrosh.jmusicbot.gui.GUI;
 import com.jagrosh.jmusicbot.playlist.PlaylistLoader;
 import com.jagrosh.jmusicbot.settings.SettingsManager;
@@ -44,6 +45,7 @@ public class Bot
     private final PlayerManager players;
     private final PlaylistLoader playlists;
     private final NowplayingHandler nowplaying;
+    private final StatusMessageHandler statusMessageHandler;
     private final AloneInVoiceHandler aloneInVoiceHandler;
     private final YoutubeOauth2TokenHandler youTubeOauth2TokenHandler;
     
@@ -64,6 +66,8 @@ public class Bot
         this.players.init();
         this.nowplaying = new NowplayingHandler(this);
         this.nowplaying.init();
+        this.statusMessageHandler = new StatusMessageHandler(this);
+        this.statusMessageHandler.init();
         this.aloneInVoiceHandler = new AloneInVoiceHandler(this);
         this.aloneInVoiceHandler.init();
     }
@@ -101,6 +105,11 @@ public class Bot
     public NowplayingHandler getNowplayingHandler()
     {
         return nowplaying;
+    }
+
+    public StatusMessageHandler getStatusMessageHandler()
+    {
+        return statusMessageHandler;
     }
 
     public AloneInVoiceHandler getAloneInVoiceHandler()

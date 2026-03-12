@@ -28,6 +28,7 @@ import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -108,8 +109,16 @@ public class Listener extends ListenerAdapter
     @Override
     public void onMessageDelete(MessageDeleteEvent event) 
     {
-        if(event.isFromGuild())
+        if(event.isFromGuild()) {
             bot.getNowplayingHandler().onMessageDelete(event.getGuild(), event.getMessageIdLong());
+            bot.getStatusMessageHandler().onMessageDelete(event.getGuild(), event.getMessageIdLong());
+        }
+    }
+
+    @Override
+    public void onMessageReceived(MessageReceivedEvent event)
+    {
+        bot.getStatusMessageHandler().onMessageReceived(event);
     }
 
     @Override

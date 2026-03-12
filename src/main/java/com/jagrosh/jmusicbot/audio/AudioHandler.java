@@ -40,7 +40,6 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.audio.AudioSendHandler;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,6 +189,7 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
             if(!playFromDefault())
             {
                 manager.getBot().getNowplayingHandler().onTrackUpdate(null);
+                manager.getBot().getStatusMessageHandler().onTrackUpdate(guildId);
                 if(!manager.getBot().getConfig().getStay())
                     manager.getBot().closeAudioConnection(guildId);
                 // unpause, in the case when the player was paused and the track has been skipped.
@@ -226,6 +226,7 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     {
         votes.clear();
         manager.getBot().getNowplayingHandler().onTrackUpdate(track);
+        manager.getBot().getStatusMessageHandler().onTrackUpdate(guildId);
     }
 
     
@@ -288,6 +289,84 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
                 .setDescription(STOP_EMOJI+" "+FormatUtil.progressBar(-1)+" "+FormatUtil.volumeIcon(audioPlayer.getVolume()))
                 .setColor(guild.getSelfMember().getColor())
                 .build()).build();
+    }
+
+    public MessageCreateData getStatusMessage(JDA jda)
+    {
+        Guild guild = guild(jda);
+        if(guild == null)
+            return null;
+        MessageCreateBuilder mb = new MessageCreateBuilder();
+        mb.setContent(FormatUtil.filter(manager.getBot().getConfig().getSuccess()+" **Now Playing...**"));
+
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setColor(guild.getSelfMember().getColor());
+
+        AudioTrack track = audioPlayer.getPlayingTrack();
+        if(isMusicPlaying(jda) && track != null)
+        {
+            try
+            {
+                eb.setTitle(track.getInfo().title, track.getInfo().uri);
+            }
+            catch(Exception e)
+            {
+                eb.setTitle(track.getInfo().title);
+            }
+        }
+        else
+        {
+            eb.setTitle("No music playing");
+        }
+
+        StringBuilder desc = new StringBuilder();
+        if(isMusicPlaying(jda) && track != null)
+        {
+            double progress = (double)track.getPosition()/track.getDuration();
+            desc.append(getStatusEmoji())
+                    .append(" ").append(FormatUtil.progressBar(progress))
+                    .append(" `[").append(TimeUtil.formatTime(track.getPosition()))
+                    .append("/").append(TimeUtil.formatTime(track.getDuration())).append("]` ")
+                    .append(FormatUtil.volumeIcon(audioPlayer.getVolume()));
+        }
+        else
+        {
+            desc.append(STOP_EMOJI)
+                    .append(" ").append(FormatUtil.progressBar(-1))
+                    .append(" ").append(FormatUtil.volumeIcon(audioPlayer.getVolume()));
+        }
+
+        List<QueuedTrack> list = queue.getList();
+        if(!list.isEmpty())
+        {
+            QueuedTrack next = list.get(0);
+            String nextTitle = next.getTrack().getInfo().title;
+            String requester = next.getRequestMetadata() == null || next.getRequestMetadata().user == null
+                    ? null
+                    : FormatUtil.formatUsername(next.getRequestMetadata().user);
+            desc.append("\n").append("Next: **").append(nextTitle).append("**");
+            if(requester != null && !requester.isEmpty())
+                desc.append(" (by ").append(requester).append(")");
+        }
+
+        long total = 0L;
+        for(QueuedTrack qt : list)
+            total += qt.getTrack().getDuration();
+        Settings settings = manager.getBot().getSettingsManager().getSettings(guildId);
+        desc.append("\n")
+                .append(manager.getBot().getConfig().getSuccess())
+                .append(" Queue | ").append(list.size()).append(" entries | `")
+                .append(TimeUtil.formatTime(total)).append("` | ")
+                .append(settings.getQueueType().getEmoji()).append(" `")
+                .append(settings.getQueueType().getUserFriendlyName()).append("`");
+        if(settings.getRepeatMode().getEmoji() != null)
+            desc.append(" | ").append(settings.getRepeatMode().getEmoji());
+
+        if(!guild.getSelfMember().getVoiceState().inAudioChannel())
+            desc.append("\n").append(manager.getBot().getConfig().getWarning()).append(" Disconnected");
+
+        eb.setDescription(FormatUtil.filter(desc.toString()));
+        return mb.setEmbeds(eb.build()).build();
     }
 
     public String getStatusEmoji()
