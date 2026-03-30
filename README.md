@@ -1,160 +1,122 @@
 <img align="right" src="https://i.imgur.com/zrE80HY.png" height="200" width="200">
 
+# JMusicBot Fork
+
+A self-hosted Discord music bot fork based on JMusicBot, updated to keep working on modern Discord and JDA versions.
+
+This repository keeps the bot practical to run today, while also adding fork-specific features such as status messages and playback analytics logging. Possibly more.
+
 ## Demo
 
-If you only want to temporarily join the demo server, use this link: [https://discord.gg/4cp9CvjwaW](https://discord.gg/4cp9CvjwaW)
+Temporary invite: [discord.gg/4cp9CvjwaW](https://discord.gg/4cp9CvjwaW)  
+Permanent invite: [discord.gg/hK95396uB3](https://discord.gg/hK95396uB3)
 
-If you want to join the demo server permanently, use this link: [https://discord.gg/hK95396uB3](https://discord.gg/hK95396uB3)
+## What This Fork Adds
+- Make it work again, through:
+    - JDA 6 support and current dependency updates
+    - DAVE voice encryption support for current Discord voice requirements
+    - Optional YouTube account login support
+    - Optional YouTube PO token and visitor-data support
+- New niche features, such as:
+    - Optional per-channel playback status message
+    - Optional JDBC/SQLite playback analytics logging
+- Basic QoL improvements, such as:
+    - Docker image and container-friendly deployment path
 
-# This fork
+## Quick Links
 
-We had to update to JDA 6, switch to jda-chewtils to make the bot work again.
-Also, we somewhat regularly bump  [lavaplayer](https://mvnrepository.com/artifact/dev.arbjerg/lavaplayer)/[lavalink](https://maven.lavalink.dev/#/releases/dev/lavalink/youtube/common) to their new versions. I will try to update this automatically in the future.
+- Fork changes and version notes: [docs/fork-changelog.md](/git/MusicBot/docs/fork-changelog.md)
+- Setup guide: [docs/setup.md](/git/MusicBot/docs/setup.md)
+- Docker usage: [docs/docker.md](/git/MusicBot/docs/docker.md)
 
-Additionally, this fork includes the following PRs from other people:
+## Features
 
-### Support for logging into your (burner) youtube account:
+- Easy self-hosting
+- Fast song loading
+- Smooth playback
+- DJ role and server-specific settings
+- Queue management and playlist support
+- Support for many sources, streams, and local files
 
-[PR-1670](https://github.com/jagrosh/MusicBot/pull/1670)
+## Supported Sources And Formats
 
-### To allow building the project from source
-[PR-1703](https://github.com/jagrosh/MusicBot/pull/1703)
+JMusicBot supports all sources and formats supported by [lavaplayer](https://github.com/sedmelluq/lavaplayer#supported-formats).
 
-### Add YouTube PO token & IP rotation
-https://github.com/jagrosh/MusicBot/pull/1772
+Sources:
+- YouTube
+- SoundCloud
+- Bandcamp
+- Vimeo
+- Twitch streams
+- Local files
+- HTTP URLs
 
+Formats:
+- MP3
+- FLAC
+- WAV
+- Matroska/WebM
+- MP4/M4A
+- OGG streams
+- AAC streams
+- Stream playlists such as M3U and PLS
 
-### For PO_Tokens: In your bot folder, edit "config.txt" and add
-```
-ytpotoken = "PO_TOKEN_HERE"
-ytvisitordata = "VISITOR_DATA_HERE"
-```
+## Setup Notes
 
-To get po_token and visitor_data, use [youtube-trusted-session-generator](https://github.com/iv-org/youtube-trusted-session-generator)
+If you only need the essentials:
 
+1. Create a Discord bot and get its token, see [here](https://jmusicbot.com/getting-a-bot-token/).
+2. Enable the `MESSAGE_CONTENT` intent in the Discord Developer Portal [here](https://discord.com/developers/applications) ([Wiki link](https://jda.wiki/using-jda/gateway-intents-and-member-cache-policy/)).
+3. Configure `config.txt`.
+4. Run the jar directly or use Docker.
 
-If you have problems with this fork, you could also check out [this other fork](https://github.com/SeVile/MusicBot).
+For the detailed version, see [docs/setup.md](/git/MusicBot/docs/setup.md).
 
-## Requirements for 0.5+ and above
+## Docker
 
-Since we updated JDA from version 4 to 6 to fix various issues, we had to enable the MESSAGE_CONTENT intent. If you let your bot join more than 100 servers(guilds), you now need to enable this intent in the [Discord Developer Portal](https://discord.com/developers/applications).
-More information can be found in the [JDA documentation](https://jda.wiki/using-jda/gateway-intents-and-member-cache-policy/).
-Note, however, that this is a privileged intent and will require a valid use-case for your bot to be verified in over 75 servers (it will only show up in the portal when on at least 76 servers according to the documentation).
+A Docker image is published here: [docker.io/chrisb09/jmusicbot](https://hub.docker.com/r/chrisb09/jmusicbot)
 
-### DAVE / Voice encryption (JDA 6.3+)
+For compose examples and deployment notes, see [docs/docker.md](/git/MusicBot/docs/docker.md).
 
-Discord requires DAVE for voice on modern API versions (JDA 6.3+).
-This fork uses `libdave-jvm` (`0.1.0`) and configures DAVE during startup.
+## YouTube Login
 
-The shaded jar includes native binaries for:
-- Linux glibc x86_64
-- Linux musl x86_64 (Alpine containers)
-- Windows x86_64
-- macOS (universal)
+This fork supports Google account login for YouTube playback workarounds.
 
-If you deploy on a different architecture, add the matching `moe.kyokobot.libdave:natives-*` dependency in `pom.xml`.
+Enable:
 
-## Easy deployment via docker
-
-Additionally, i thought a corresponding docker image would make things better:
-
-The image can be found on [dockerhub](https://hub.docker.com/r/chrisb09/jmusicbot)
-
-Docker-compose:
-
-```yaml
-version: '2.2'
-
-services:
-  jmusicbot:
-    image: chrisb09/jmusicbot:latest
-    container_name: jmusicbot
-    restart: unless-stopped
-    volumes:
-     - ./config:/jmb/config
-```
-
-although, obviously you should change `./config` to whatever path is right for your setup.
-Source code for the docker image is also on [Github](https://github.com/chrisb09/jmb-container).
-
-### Windows
-
-If you want to run the bot on a windows host without docker, you obviously need to install java, and if you want to run it in the background something like [nssm](http://nssm.cc/) can be helpful.
-
-
-## YouTube-Login
-
-Obviously you still need to log in if you want to use youtube properly, hence you need to enable this in the config.
-If you are using a pre-existing config, simply add:
-```
-/ If you set this to true, the bot will use a Google account to play YouTube tracks.
-// This is only needed if you are experiencing issues with YouTube playback.
-// Once enabled, instructions for login will be written to the console and DMs.
-// DO NOT use your main Google account! Use an alternative account.
-
+```conf
 youtubeoauth2=true
 ```
 
-If you start with a clean slate this line should already be present, albeit with `false` being the default.
-As the author of the PR reiterates multiple times, do not use your main google account as using your account for a bot is most certainly against the ToS and thus you are endangering said account.
+Do not use your main Google account. Use a burner or otherwise disposable account instead.
 
-To add the account you simply have to follow the very basic instructions printed either in the console or sent to you from the bot via discord after you have started it, open the linked google page and paste the code.
+More details are in [docs/setup.md](/git/MusicBot/docs/setup.md).
 
-# JMusicBot
+If you use PO tokens or visitor data for YouTube, those details are also covered in [docs/setup.md](/git/MusicBot/docs/setup.md).
 
-[![Downloads](https://img.shields.io/github/downloads/jagrosh/MusicBot/total.svg)](https://github.com/jagrosh/MusicBot/releases/latest)
-[![Stars](https://img.shields.io/github/stars/jagrosh/MusicBot.svg)](https://github.com/jagrosh/MusicBot/stargazers)
-[![Release](https://img.shields.io/github/release/jagrosh/MusicBot.svg)](https://github.com/jagrosh/MusicBot/releases/latest)
-[![License](https://img.shields.io/github/license/jagrosh/MusicBot.svg)](https://github.com/jagrosh/MusicBot/blob/master/LICENSE)
-[![Discord](https://discordapp.com/api/guilds/147698382092238848/widget.png)](https://discord.gg/0p9LSGoRLu6Pet0k)<br>
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/jagrosh/MusicBot/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/jagrosh/MusicBot/tree/master)
-[![Build and Test](https://github.com/jagrosh/MusicBot/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/jagrosh/MusicBot/actions/workflows/build-and-test.yml)
-[![CodeFactor](https://www.codefactor.io/repository/github/jagrosh/musicbot/badge)](https://www.codefactor.io/repository/github/jagrosh/musicbot)
+## DAVE / Voice Encryption
 
-A cross-platform Discord music bot with a clean interface, and that is easy to set up and run yourself!
+Discord currently requires DAVE for voice on modern API versions. This fork configures `libdave-jvm` during startup and bundles native binaries for common Linux, Windows, and macOS targets.
 
-[![Setup](http://i.imgur.com/VvXYp5j.png)](https://jmusicbot.com/setup)
+If you deploy on an unsupported architecture, add the matching native dependency in [pom.xml](/git/MusicBot/pom.xml). You probably need to build the library from source for your architecture, so have fun with that.
 
-## Features
-  * Easy to run (just make sure Java is installed, and run!)
-  * Fast loading of songs
-  * No external keys needed (besides a Discord Bot token)
-  * Smooth playback
-  * Server-specific setup for the "DJ" role that can moderate the music
-  * Clean and beautiful menus
-  * Supports many sites, including Youtube, Soundcloud, and more
-  * Supports many online radio/streams
-  * Supports local files
-  * Playlist support (both web/youtube, and local)
+## Upstream And Related Work
 
-## Supported sources and formats
-JMusicBot supports all sources and formats supported by [lavaplayer](https://github.com/sedmelluq/lavaplayer#supported-formats):
-### Sources
-  * YouTube
-  * SoundCloud
-  * Bandcamp
-  * Vimeo
-  * Twitch streams
-  * Local files
-  * HTTP URLs
-### Formats
-  * MP3
-  * FLAC
-  * WAV
-  * Matroska/WebM (AAC, Opus or Vorbis codecs)
-  * MP4/M4A (AAC codec)
-  * OGG streams (Opus, Vorbis and FLAC codecs)
-  * AAC streams
-  * Stream playlists (M3U and PLS)
+This fork incorporates ideas and patches related to:
 
-## Example
-![Loading Example...](https://i.imgur.com/kVtTKvS.gif)
+- [PR-1670](https://github.com/jagrosh/MusicBot/pull/1670)
+- [PR-1703](https://github.com/jagrosh/MusicBot/pull/1703)
+- [PR-1772](https://github.com/jagrosh/MusicBot/pull/1772)
 
-## Setup
-Please see the [Setup Page](https://jmusicbot.com/setup) to run this bot yourself!
+If this fork does not fit your needs, another fork you may want to inspect is [SeVile/MusicBot](https://github.com/SeVile/MusicBot).
 
-## Questions/Suggestions/Bug Reports
-**Please read the [Issues List](https://github.com/jagrosh/MusicBot/issues) before suggesting a feature**. If you have a question, need troubleshooting help, or want to brainstorm a new feature, please start a [Discussion](https://github.com/jagrosh/MusicBot/discussions). If you'd like to suggest a feature or report a reproducible bug, please open an [Issue](https://github.com/jagrosh/MusicBot/issues) on this repository. If you like this bot, be sure to add a star to the libraries that make this possible: [**JDA**](https://github.com/DV8FromTheWorld/JDA) and [**lavaplayer**](https://github.com/sedmelluq/lavaplayer)!
+## Questions And Contributions
 
-## Editing
-This bot (and the source code here) might not be easy to edit for inexperienced programmers. The main purpose of having the source public is to show the capabilities of the libraries, to allow others to understand how the bot works, and to allow those knowledgeable about java, JDA, and Discord bot development to contribute. There are many requirements and dependencies required to edit and compile it, and there will not be support provided for people looking to make changes on their own. Instead, consider making a feature request (see the above section). If you choose to make edits, please do so in accordance with the Apache 2.0 License.
+If you run into issues, please include:
+
+- the version you are running
+- whether you are using Docker or the jar directly
+- relevant config changes
+- relevant logs
+
+Fork-specific version notes live in [docs/fork-changelog.md](/git/MusicBot/docs/fork-changelog.md), which should help with troubleshooting and migration as the fork evolves.
