@@ -19,6 +19,8 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -39,6 +41,16 @@ public class StopCmd extends DJCommand
     public void doCommand(CommandEvent event) 
     {
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        int sizeBefore = handler.getQueue().size();
+        if(handler.getPlayer().getPlayingTrack() != null && bot.getDataLogService() != null)
+        {
+            JSONObject meta = new JSONObject()
+                    .put("queue_size_before", sizeBefore)
+                    .put("queue_size_after", 0);
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                    "STOP", null, null, null, null, meta.toString());
+            CommandLogContext.setMeta(meta);
+        }
         handler.stopAndClear();
         event.getGuild().getAudioManager().closeAudioConnection();
         event.reply(event.getClient().getSuccess()+" The player has stopped and the queue has been cleared.");

@@ -20,7 +20,9 @@ import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import org.json.JSONObject;
 
 /**
  *
@@ -50,6 +52,13 @@ public class SkipCmd extends MusicCommand
         if(event.getAuthor().getIdLong() == rm.getOwner() || skipRatio == 0)
         {
             event.reply(event.getClient().getSuccess()+" Skipped **"+handler.getPlayer().getPlayingTrack().getInfo().title+"**");
+            if(bot.getDataLogService() != null)
+            {
+                JSONObject meta = new JSONObject().put("reason", "REQUESTER");
+                bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                        "SKIP_REQUESTER", null, null, null, null, meta.toString());
+                CommandLogContext.setMeta(meta);
+            }
             handler.getPlayer().stopTrack();
         }
         else
@@ -63,15 +72,36 @@ public class SkipCmd extends MusicCommand
             {
                 msg = event.getClient().getSuccess()+" You voted to skip the song `[";
                 handler.getVotes().add(event.getAuthor().getId());
+                if(bot.getDataLogService() != null)
+                {
+                    JSONObject meta = new JSONObject().put("vote", "added");
+                    bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                            "SKIP_VOTE", null, null, null, null, meta.toString());
+                }
             }
             int skippers = (int)event.getSelfMember().getVoiceState().getChannel().getMembers().stream()
                     .filter(m -> handler.getVotes().contains(m.getUser().getId())).count();
             int required = (int)Math.ceil(listeners * skipRatio);
             msg += skippers + " votes, " + required + "/" + listeners + " needed]`";
+            CommandLogContext.setMeta(new JSONObject()
+                    .put("votes", skippers)
+                    .put("required", required)
+                    .put("listeners", listeners));
             if(skippers>=required)
             {
                 msg += "\n" + event.getClient().getSuccess() + " Skipped **" + handler.getPlayer().getPlayingTrack().getInfo().title
                     + "** " + (rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)");
+                if(bot.getDataLogService() != null)
+                {
+                    JSONObject meta = new JSONObject()
+                            .put("reason", "VOTE")
+                            .put("votes", skippers)
+                            .put("required", required)
+                            .put("listeners", listeners);
+                    bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                            "SKIP_VOTE_ACTION", null, null, null, null, meta.toString());
+                    CommandLogContext.setMeta(meta);
+                }
                 handler.getPlayer().stopTrack();
             }
             event.reply(msg);

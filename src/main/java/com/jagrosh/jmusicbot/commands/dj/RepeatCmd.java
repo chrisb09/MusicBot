@@ -18,8 +18,10 @@ package com.jagrosh.jmusicbot.commands.dj;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.RepeatMode;
 import com.jagrosh.jmusicbot.settings.Settings;
+import org.json.JSONObject;
 
 /**
  *
@@ -37,13 +39,13 @@ public class RepeatCmd extends DJCommand
         this.guildOnly = true;
     }
     
-    // override musiccommand's execute because we don't actually care where this is used
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         String args = event.getArgs();
         RepeatMode value;
         Settings settings = event.getClient().getSettingsFor(event.getGuild());
+        RepeatMode before = settings.getRepeatMode();
         if(args.isEmpty())
         {
             if(settings.getRepeatMode() == RepeatMode.OFF)
@@ -66,12 +68,11 @@ public class RepeatCmd extends DJCommand
         else
         {
             event.replyError("Valid options are `off`, `all` or `single` (or leave empty to toggle between `off` and `all`)");
+            CommandLogContext.setError("invalid_repeat_mode");
             return;
         }
         settings.setRepeatMode(value);
         event.replySuccess("Repeat mode is now `"+value.getUserFriendlyName()+"`");
+        CommandLogContext.setMeta(new JSONObject().put("before", before.name()).put("after", value.name()));
     }
-
-    @Override
-    public void doCommand(CommandEvent event) { /* Intentionally Empty */ }
 }

@@ -18,7 +18,8 @@ package com.jagrosh.jmusicbot;
 import com.jagrosh.jdautilities.command.CommandClient;
 import com.jagrosh.jdautilities.command.CommandClientBuilder;
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
-import com.jagrosh.jdautilities.examples.command.*;
+import com.jagrosh.jmusicbot.commands.general.LoggedAboutCmd;
+import com.jagrosh.jmusicbot.commands.general.LoggedPingCmd;
 import com.jagrosh.jmusicbot.commands.admin.*;
 import com.jagrosh.jmusicbot.commands.dj.*;
 import com.jagrosh.jmusicbot.commands.general.*;
@@ -194,7 +195,7 @@ public class JMusicBot
     private static CommandClient createCommandClient(BotConfig config, SettingsManager settings, Bot bot)
     {
         // instantiate about command
-        AboutCommand aboutCommand = new AboutCommand(Color.BLUE.brighter(),
+        LoggedAboutCmd aboutCommand = new LoggedAboutCmd(bot, Color.BLUE.brighter(),
                                 "a music bot that is [easy to host yourself!](https://github.com/jagrosh/MusicBot) (v" + OtherUtil.getCurrentVersion() + ")",
                                 new String[]{"High-quality music playback", "FairQueue™ Technology", "Easy to host yourself"},
                                 RECOMMENDED_PERMS);
@@ -211,7 +212,7 @@ public class JMusicBot
                 .setLinkedCacheSize(200)
                 .setGuildSettingsManager(settings)
                 .addCommands(aboutCommand,
-                        new PingCommand(),
+                        new LoggedPingCmd(bot),
                         new SettingsCmd(bot),
                         
                         new LyricsCmd(bot),

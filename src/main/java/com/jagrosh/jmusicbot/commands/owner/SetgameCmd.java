@@ -18,7 +18,9 @@ package com.jagrosh.jmusicbot.commands.owner;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import net.dv8tion.jda.api.entities.Activity;
+import org.json.JSONObject;
 
 /**
  *
@@ -28,6 +30,7 @@ public class SetgameCmd extends OwnerCommand
 {
     public SetgameCmd(Bot bot)
     {
+        super(bot);
         this.name = "setgame";
         this.help = "sets the game the bot is playing";
         this.arguments = "[action] [game]";
@@ -41,7 +44,7 @@ public class SetgameCmd extends OwnerCommand
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         String title = event.getArgs().toLowerCase().startsWith("playing") ? event.getArgs().substring(7).trim() : event.getArgs();
         try
@@ -49,10 +52,14 @@ public class SetgameCmd extends OwnerCommand
             event.getJDA().getPresence().setActivity(title.isEmpty() ? null : Activity.playing(title));
             event.reply(event.getClient().getSuccess()+" **"+event.getSelfUser().getName()
                     +"** is "+(title.isEmpty() ? "no longer playing anything." : "now playing `"+title+"`"));
+            CommandLogContext.setMeta(new JSONObject()
+                    .put("activity_type", "PLAYING")
+                    .put("title", title.isEmpty() ? JSONObject.NULL : title));
         }
         catch(Exception e)
         {
             event.reply(event.getClient().getError()+" The game could not be set!");
+            CommandLogContext.setError("set_game_failed");
         }
     }
     
@@ -60,6 +67,7 @@ public class SetgameCmd extends OwnerCommand
     {
         private SetstreamCmd()
         {
+            super(SetgameCmd.this.bot);
             this.name = "stream";
             this.aliases = new String[]{"twitch","streaming"};
             this.help = "sets the game the bot is playing to a stream";
@@ -68,12 +76,13 @@ public class SetgameCmd extends OwnerCommand
         }
 
         @Override
-        protected void execute(CommandEvent event)
+        public void doCommand(CommandEvent event)
         {
             String[] parts = event.getArgs().split("\\s+", 2);
             if(parts.length<2)
             {
                 event.replyError("Please include a twitch username and the name of the game to 'stream'");
+                CommandLogContext.setError("missing_stream_args");
                 return;
             }
             try
@@ -81,10 +90,15 @@ public class SetgameCmd extends OwnerCommand
                 event.getJDA().getPresence().setActivity(Activity.streaming(parts[1], "https://twitch.tv/"+parts[0]));
                 event.replySuccess("**"+event.getSelfUser().getName()
                         +"** is now streaming `"+parts[1]+"`");
+                CommandLogContext.setMeta(new JSONObject()
+                        .put("activity_type", "STREAMING")
+                        .put("title", parts[1])
+                        .put("user", parts[0]));
             }
             catch(Exception e)
             {
                 event.reply(event.getClient().getError()+" The game could not be set!");
+                CommandLogContext.setError("set_game_failed");
             }
         }
     }
@@ -93,6 +107,7 @@ public class SetgameCmd extends OwnerCommand
     {
         private SetlistenCmd()
         {
+            super(SetgameCmd.this.bot);
             this.name = "listen";
             this.aliases = new String[]{"listening"};
             this.help = "sets the game the bot is listening to";
@@ -101,11 +116,12 @@ public class SetgameCmd extends OwnerCommand
         }
 
         @Override
-        protected void execute(CommandEvent event)
+        public void doCommand(CommandEvent event)
         {
             if(event.getArgs().isEmpty())
             {
                 event.replyError("Please include a title to listen to!");
+                CommandLogContext.setError("missing_listen_title");
                 return;
             }
             String title = event.getArgs().toLowerCase().startsWith("to") ? event.getArgs().substring(2).trim() : event.getArgs();
@@ -113,8 +129,10 @@ public class SetgameCmd extends OwnerCommand
             {
                 event.getJDA().getPresence().setActivity(Activity.listening(title));
                 event.replySuccess("**"+event.getSelfUser().getName()+"** is now listening to `"+title+"`");
+                CommandLogContext.setMeta(new JSONObject().put("activity_type", "LISTENING").put("title", title));
             } catch(Exception e) {
                 event.reply(event.getClient().getError()+" The game could not be set!");
+                CommandLogContext.setError("set_game_failed");
             }
         }
     }
@@ -123,6 +141,7 @@ public class SetgameCmd extends OwnerCommand
     {
         private SetwatchCmd()
         {
+            super(SetgameCmd.this.bot);
             this.name = "watch";
             this.aliases = new String[]{"watching"};
             this.help = "sets the game the bot is watching";
@@ -131,11 +150,12 @@ public class SetgameCmd extends OwnerCommand
         }
 
         @Override
-        protected void execute(CommandEvent event)
+        public void doCommand(CommandEvent event)
         {
             if(event.getArgs().isEmpty())
             {
                 event.replyError("Please include a title to watch!");
+                CommandLogContext.setError("missing_watch_title");
                 return;
             }
             String title = event.getArgs();
@@ -143,8 +163,10 @@ public class SetgameCmd extends OwnerCommand
             {
                 event.getJDA().getPresence().setActivity(Activity.watching(title));
                 event.replySuccess("**"+event.getSelfUser().getName()+"** is now watching `"+title+"`");
+                CommandLogContext.setMeta(new JSONObject().put("activity_type", "WATCHING").put("title", title));
             } catch(Exception e) {
                 event.reply(event.getClient().getError()+" The game could not be set!");
+                CommandLogContext.setError("set_game_failed");
             }
         }
     }

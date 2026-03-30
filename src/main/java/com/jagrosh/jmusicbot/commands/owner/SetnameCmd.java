@@ -18,7 +18,9 @@ package com.jagrosh.jmusicbot.commands.owner;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import net.dv8tion.jda.api.exceptions.RateLimitedException;
+import org.json.JSONObject;
 
 /**
  *
@@ -28,6 +30,7 @@ public class SetnameCmd extends OwnerCommand
 {
     public SetnameCmd(Bot bot)
     {
+        super(bot);
         this.name = "setname";
         this.help = "sets the name of the bot";
         this.arguments = "<name>";
@@ -36,21 +39,24 @@ public class SetnameCmd extends OwnerCommand
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         try 
         {
             String oldname = event.getSelfUser().getName();
             event.getSelfUser().getManager().setName(event.getArgs()).complete(false);
             event.reply(event.getClient().getSuccess()+" Name changed from `"+oldname+"` to `"+event.getArgs()+"`");
+            CommandLogContext.setMeta(new JSONObject().put("before", oldname).put("after", event.getArgs()));
         } 
         catch(RateLimitedException e) 
         {
             event.reply(event.getClient().getError()+" Name can only be changed twice per hour!");
+            CommandLogContext.setError("rate_limited");
         }
         catch(Exception e) 
         {
             event.reply(event.getClient().getError()+" That name is not valid!");
+            CommandLogContext.setError("invalid_name");
         }
     }
 }

@@ -51,6 +51,8 @@ public class BotConfig
     private List<IpBlock> ytIpBlocks;
     private boolean youtubeOauth2, stayInChannel, songInGame, npImages, updatealerts, chromeHeadless, useEval, dbots;
     private boolean statusMessages;
+    private boolean dataLogEnabled;
+    private String dataLogJdbcUrl, dataLogUser, dataLogPassword;
     private long owner, maxSeconds, aloneTimeUntilStop;
     private int maxYTPlaylistPages;
     private double skipratio;
@@ -114,6 +116,11 @@ public class BotConfig
             transforms = config.getConfig("transforms");
             skipratio = config.getDouble("skipratio");
             dbots = owner == 113156185389092864L;
+            dataLogEnabled = config.getBoolean("dblog.enabled");
+            dataLogJdbcUrl = config.getString("dblog.jdbc_url");
+            dataLogUser = config.getString("dblog.user");
+            dataLogPassword = config.getString("dblog.password");
+            
             // we may need to write a new config file
             boolean write = false;
 
@@ -262,6 +269,26 @@ public class BotConfig
         return owner;
     }
 
+    public boolean getDataLogEnabled()
+    {
+        return dataLogEnabled;
+    }
+
+    public String getDataLogJdbcUrl()
+    {
+        return dataLogJdbcUrl;
+    }
+
+    public String getDataLogUser()
+    {
+        return dataLogUser;
+    }
+
+    public String getDataLogPassword()
+    {
+        return dataLogPassword;
+    }
+    
     public String getSuccess()
     {
         return successEmoji;

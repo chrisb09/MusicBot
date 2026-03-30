@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 John Grosh <john.a.grosh@gmail.com>.
+ * Copyright 2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,28 +20,14 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import org.json.JSONObject;
-import net.dv8tion.jda.api.Permission;
 
-/**
- *
- * @author John Grosh (john.a.grosh@gmail.com)
- */
-public abstract class AdminCommand extends Command
+public abstract class LoggedCommand extends Command
 {
     protected final Bot bot;
 
-    public AdminCommand(Bot bot)
+    public LoggedCommand(Bot bot)
     {
         this.bot = bot;
-        this.category = new Category("Admin", event -> 
-        {
-            if(event.getAuthor().getId().equals(event.getClient().getOwnerId()))
-                return true;
-            if(event.getGuild()==null)
-                return true;
-            return event.getMember().hasPermission(Permission.MANAGE_SERVER);
-        });
-        this.guildOnly = true;
     }
 
     @Override

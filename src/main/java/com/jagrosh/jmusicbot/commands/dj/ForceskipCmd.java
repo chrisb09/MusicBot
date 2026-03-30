@@ -20,7 +20,9 @@ import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import org.json.JSONObject;
 
 /**
  *
@@ -44,6 +46,13 @@ public class ForceskipCmd extends DJCommand
         RequestMetadata rm = handler.getRequestMetadata();
         event.reply(event.getClient().getSuccess()+" Skipped **"+handler.getPlayer().getPlayingTrack().getInfo().title
                 +"** "+(rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)"));
+        if(bot.getDataLogService() != null)
+        {
+            JSONObject meta = new JSONObject().put("reason", "FORCE");
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                    "SKIP_FORCE", null, null, null, null, meta.toString());
+            CommandLogContext.setMeta(meta);
+        }
         handler.getPlayer().stopTrack();
     }
 }

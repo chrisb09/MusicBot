@@ -20,8 +20,10 @@ import com.jagrosh.jlyrics.LyricsClient;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
+import org.json.JSONObject;
 
 /**
  *
@@ -44,6 +46,7 @@ public class LyricsCmd extends MusicCommand
     @Override
     public void doCommand(CommandEvent event)
     {
+        CommandLogContext.setManualLogging();
         String title;
         if(event.getArgs().isEmpty())
         {
@@ -53,6 +56,7 @@ public class LyricsCmd extends MusicCommand
             else
             {
                 event.replyError("There must be music playing to use that!");
+                logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "no_music_playing"));
                 return;
             }
         }
@@ -64,6 +68,7 @@ public class LyricsCmd extends MusicCommand
             if(lyrics == null)
             {
                 event.replyError("Lyrics for `" + title + "` could not be found!" + (event.getArgs().isEmpty() ? " Try entering the song name manually (`lyrics [song name]`)" : ""));
+                logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "lyrics_not_found"));
                 return;
             }
 
@@ -95,6 +100,15 @@ public class LyricsCmd extends MusicCommand
             }
             else
                 event.reply(eb.setDescription(lyrics.getContent()).build());
+            logCommandEvent(event, "OK", new JSONObject().put("title", lyrics.getTitle()));
         });
+    }
+
+    private void logCommandEvent(CommandEvent event, String result, JSONObject meta)
+    {
+        if(bot.getDataLogService() == null || event == null || event.getGuild() == null)
+            return;
+        bot.getDataLogService().logCommandEvent(event.getGuild(), event.getAuthor(), getName(),
+                event.getArgs(), result, meta == null ? null : meta.toString());
     }
 }

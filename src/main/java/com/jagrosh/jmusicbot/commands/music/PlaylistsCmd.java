@@ -19,6 +19,8 @@ import java.util.List;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -45,19 +47,27 @@ public class PlaylistsCmd extends MusicCommand
         if(!bot.getPlaylistLoader().folderExists())
         {
             event.reply(event.getClient().getWarning()+" Playlists folder does not exist and could not be created!");
+            CommandLogContext.setError("playlist_folder_missing");
             return;
         }
         List<String> list = bot.getPlaylistLoader().getPlaylistNames();
         if(list==null)
+        {
             event.reply(event.getClient().getError()+" Failed to load available playlists!");
+            CommandLogContext.setError("playlist_list_failed");
+        }
         else if(list.isEmpty())
+        {
             event.reply(event.getClient().getWarning()+" There are no playlists in the Playlists folder!");
+            CommandLogContext.setMeta(new JSONObject().put("count", 0));
+        }
         else
         {
             StringBuilder builder = new StringBuilder(event.getClient().getSuccess()+" Available playlists:\n");
             list.forEach(str -> builder.append("`").append(str).append("` "));
             builder.append("\nType `").append(event.getClient().getTextualPrefix()).append("play playlist <name>` to play a playlist");
             event.reply(builder.toString());
+            CommandLogContext.setMeta(new JSONObject().put("count", list.size()));
         }
     }
 }

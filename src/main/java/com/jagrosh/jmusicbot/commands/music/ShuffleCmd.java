@@ -19,6 +19,8 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -40,17 +42,28 @@ public class ShuffleCmd extends MusicCommand
     public void doCommand(CommandEvent event) 
     {
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        int sizeBefore = handler.getQueue().size();
         int s = handler.getQueue().shuffle(event.getAuthor().getIdLong());
         switch (s) 
         {
             case 0:
                 event.replyError("You don't have any music in the queue to shuffle!");
+                CommandLogContext.setError("no_entries_to_shuffle");
                 break;
             case 1:
                 event.replyWarning("You only have one song in the queue!");
+                CommandLogContext.setMeta(new JSONObject().put("shuffled_count", 1));
                 break;
             default:
                 event.replySuccess("You successfully shuffled your "+s+" entries.");
+                JSONObject meta = new JSONObject()
+                        .put("shuffled_count", s)
+                        .put("queue_size_before", sizeBefore)
+                        .put("queue_size_after", handler.getQueue().size());
+                CommandLogContext.setMeta(meta);
+                if(bot.getDataLogService() != null)
+                    bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), null,
+                            "SHUFFLE", null, null, null, null, meta.toString());
                 break;
         }
     }

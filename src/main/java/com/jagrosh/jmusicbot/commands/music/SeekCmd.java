@@ -21,10 +21,12 @@ import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.DJCommand;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.TimeUtil;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.json.JSONObject;
 
 
 /**
@@ -53,6 +55,7 @@ public class SeekCmd extends MusicCommand
         if (!playingTrack.isSeekable())
         {
             event.replyError("This track is not seekable.");
+            CommandLogContext.setError("not_seekable");
             return;
         }
 
@@ -60,6 +63,7 @@ public class SeekCmd extends MusicCommand
         if (!DJCommand.checkDJPermission(event) && playingTrack.getUserData(RequestMetadata.class).getOwner() != event.getAuthor().getIdLong())
         {
             event.replyError("You cannot seek **" + playingTrack.getInfo().title + "** because you didn't add it!");
+            CommandLogContext.setError("not_owner");
             return;
         }
 
@@ -68,6 +72,7 @@ public class SeekCmd extends MusicCommand
         if (seekTime == null)
         {
             event.replyError("Invalid seek! Expected format: " + arguments + "\nExamples: `1:02:23` `+1:10` `-90`, `1h10m`, `+90s`");
+            CommandLogContext.setError("invalid_seek");
             return;
         }
 
@@ -78,6 +83,7 @@ public class SeekCmd extends MusicCommand
         if (seekMilliseconds > trackDuration)
         {
             event.replyError("Cannot seek to `" + TimeUtil.formatTime(seekMilliseconds) + "` because the current track is `" + TimeUtil.formatTime(trackDuration) + "` long!");
+            CommandLogContext.setError("seek_out_of_bounds");
             return;
         }
         
@@ -89,8 +95,16 @@ public class SeekCmd extends MusicCommand
         {
             event.replyError("An error occurred while trying to seek: " + e.getMessage());
             LOG.warn("Failed to seek track " + playingTrack.getIdentifier(), e);
+            CommandLogContext.setError("seek_failed");
             return;
         }
         event.replySuccess("Successfully seeked to `" + TimeUtil.formatTime(playingTrack.getPosition()) + "/" + TimeUtil.formatTime(playingTrack.getDuration()) + "`!");
+        JSONObject meta = new JSONObject()
+                .put("seek_from_ms", currentPosition)
+                .put("seek_to_ms", playingTrack.getPosition());
+        CommandLogContext.setMeta(meta);
+        if(bot.getDataLogService() != null)
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), playingTrack,
+                    "SEEK", null, null, null, null, meta.toString());
     }
 }

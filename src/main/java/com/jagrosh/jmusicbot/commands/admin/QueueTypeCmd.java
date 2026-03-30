@@ -19,8 +19,10 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.AdminCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.QueueType;
 import com.jagrosh.jmusicbot.settings.Settings;
+import org.json.JSONObject;
 
 /**
  *
@@ -30,7 +32,7 @@ public class QueueTypeCmd extends AdminCommand
 {
     public QueueTypeCmd(Bot bot)
     {
-        super();
+        super(bot);
         this.name = "queuetype";
         this.help = "changes the queue type";
         this.arguments = "[" + String.join("|", QueueType.getNames()) + "]";
@@ -38,16 +40,18 @@ public class QueueTypeCmd extends AdminCommand
     }
 
     @Override
-    protected void execute(CommandEvent event)
+    public void doCommand(CommandEvent event)
     {
         String args = event.getArgs();
         QueueType value;
         Settings settings = event.getClient().getSettingsFor(event.getGuild());
+        QueueType before = settings.getQueueType();
 
         if (args.isEmpty())
         {
             QueueType currentType = settings.getQueueType();
             event.reply(currentType.getEmoji() + " Current queue type is: `" + currentType.getUserFriendlyName() + "`.");
+            CommandLogContext.setMeta(new JSONObject().put("current", currentType.name()));
             return;
         }
 
@@ -58,6 +62,7 @@ public class QueueTypeCmd extends AdminCommand
         catch (IllegalArgumentException e)
         {
             event.replyError("Invalid queue type. Valid types are: [" + String.join("|", QueueType.getNames()) + "]");
+            CommandLogContext.setError("invalid_queue_type");
             return;
         }
 
@@ -71,5 +76,6 @@ public class QueueTypeCmd extends AdminCommand
         }
 
         event.reply(value.getEmoji() + " Queue type was set to `" + value.getUserFriendlyName() + "`.");
+        CommandLogContext.setMeta(new JSONObject().put("before", before.name()).put("after", value.name()));
     }
 }

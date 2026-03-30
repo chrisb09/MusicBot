@@ -21,10 +21,12 @@ import com.jagrosh.jdautilities.menu.OrderedMenu;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
+import org.json.JSONObject;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +55,7 @@ public class ForceRemoveCmd extends DJCommand
         if (event.getArgs().isEmpty())
         {
             event.replyError("You need to mention a user!");
+            CommandLogContext.setError("missing_user");
             return;
         }
 
@@ -60,6 +63,7 @@ public class ForceRemoveCmd extends DJCommand
         if (handler.getQueue().isEmpty())
         {
             event.replyError("There is nothing in the queue!");
+            CommandLogContext.setError("empty_queue");
             return;
         }
 
@@ -70,6 +74,7 @@ public class ForceRemoveCmd extends DJCommand
         if(found.isEmpty())
         {
             event.replyError("Unable to find the user!");
+            CommandLogContext.setError("user_not_found");
             return;
         }
         else if(found.size()>1)
@@ -107,14 +112,26 @@ public class ForceRemoveCmd extends DJCommand
 
     private void removeAllEntries(User target, CommandEvent event)
     {
-        int count = ((AudioHandler) event.getGuild().getAudioManager().getSendingHandler()).getQueue().removeAll(target.getIdLong());
+        AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+        int sizeBefore = handler.getQueue().size();
+        int count = handler.getQueue().removeAll(target.getIdLong());
         if (count == 0)
         {
             event.replyWarning("**"+target.getName()+"** doesn't have any songs in the queue!");
+            CommandLogContext.setError("no_entries_for_user");
         }
         else
         {
             event.replySuccess("Successfully removed `"+count+"` entries from "+FormatUtil.formatUsername(target)+".");
         }
+        JSONObject meta = new JSONObject()
+                .put("target_user_id", target.getIdLong())
+                .put("removed_count", count)
+                .put("queue_size_before", sizeBefore)
+                .put("queue_size_after", handler.getQueue().size());
+        CommandLogContext.setMeta(meta);
+        if(bot.getDataLogService() != null)
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), null, "REMOVE_ALL",
+                    "FORCE", null, null, null, meta.toString());
     }
 }

@@ -157,10 +157,13 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
             return false;
         pl.loadTracks(manager, (at) -> 
         {
+            at.setUserData(RequestMetadata.fromDefaultPlaylist(settings.getDefaultPlaylist()));
             if(audioPlayer.getPlayingTrack()==null)
                 audioPlayer.playTrack(at);
             else
                 defaultQueue.add(at);
+            if(manager.getBot().getDataLogService() != null)
+                manager.getBot().getDataLogService().logQueueAdd(guild(manager.getBot().getJDA()), null, at, "DEFAULT_PLAYLIST", null, null, settings.getDefaultPlaylist());
         }, () -> 
         {
             if(pl.getTracks().isEmpty() && !manager.getBot().getConfig().getStay())
@@ -173,6 +176,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) 
     {
+        if(manager.getBot().getDataLogService() != null)
+            manager.getBot().getDataLogService().logPlayEnd(guild(manager.getBot().getJDA()), endReason.name());
         RepeatMode repeatMode = manager.getBot().getSettingsManager().getSettings(guildId).getRepeatMode();
         // if the track ended normally, and we're in repeat mode, re-add it to the queue
         if(endReason==AudioTrackEndReason.FINISHED && repeatMode != RepeatMode.OFF)
@@ -227,6 +232,14 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
         votes.clear();
         manager.getBot().getNowplayingHandler().onTrackUpdate(track);
         manager.getBot().getStatusMessageHandler().onTrackUpdate(guildId);
+        if(manager.getBot().getDataLogService() != null)
+        {
+            RequestMetadata rm = getRequestMetadata();
+            String source = rm.queueInfo == null ? null : rm.queueInfo.source;
+            String searchQuery = rm.queueInfo == null ? null : rm.queueInfo.searchQuery;
+            String playlistName = rm.queueInfo == null ? null : rm.queueInfo.playlistName;
+            manager.getBot().getDataLogService().logPlayStart(guild(manager.getBot().getJDA()), track, rm, source, searchQuery, playlistName);
+        }
     }
 
     

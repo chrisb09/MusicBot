@@ -19,8 +19,10 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import org.json.JSONObject;
 
 /**
  *
@@ -46,10 +48,14 @@ public class NowplayingCmd extends MusicCommand
         {
             event.getMessage().getChannel().sendMessage(handler.getNoMusicPlaying(event.getJDA())).queue();
             bot.getNowplayingHandler().clearLastNPMessage(event.getGuild());
+            CommandLogContext.setMeta(new JSONObject().put("playing", false));
         }
         else
         {
             event.getMessage().getChannel().sendMessage(m).queue(msg -> bot.getNowplayingHandler().setLastNPMessage(msg));
+            CommandLogContext.setMeta(new JSONObject()
+                    .put("playing", true)
+                    .put("title", handler.getPlayer().getPlayingTrack() == null ? JSONObject.NULL : handler.getPlayer().getPlayingTrack().getInfo().title));
         }
     }
 }

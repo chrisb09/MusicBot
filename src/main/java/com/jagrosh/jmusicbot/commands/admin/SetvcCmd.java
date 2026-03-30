@@ -20,9 +20,11 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jdautilities.commons.utils.FinderUtil;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.AdminCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.Settings;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import org.json.JSONObject;
 
 /**
  *
@@ -32,6 +34,7 @@ public class SetvcCmd extends AdminCommand
 {
     public SetvcCmd(Bot bot)
     {
+        super(bot);
         this.name = "setvc";
         this.help = "sets the voice channel for playing music";
         this.arguments = "<channel|NONE>";
@@ -39,31 +42,41 @@ public class SetvcCmd extends AdminCommand
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         if(event.getArgs().isEmpty())
         {
             event.reply(event.getClient().getError()+" Please include a voice channel or NONE");
+            CommandLogContext.setError("missing_voice_channel");
             return;
         }
         Settings s = event.getClient().getSettingsFor(event.getGuild());
+        String before = s.getVoiceChannel(event.getGuild()) == null ? null : s.getVoiceChannel(event.getGuild()).getId();
         if(event.getArgs().equalsIgnoreCase("none"))
         {
             s.setVoiceChannel(null);
             event.reply(event.getClient().getSuccess()+" Music can now be played in any channel");
+            CommandLogContext.setMeta(new JSONObject().put("before", before).put("after", JSONObject.NULL));
         }
         else
         {
             @SuppressWarnings({"unchecked", "rawtypes"})
             List<VoiceChannel> list = (List) FinderUtil.findVoiceChannels(event.getArgs(), event.getGuild());
             if(list.isEmpty())
+            {
                 event.reply(event.getClient().getWarning()+" No Voice Channels found matching \""+event.getArgs()+"\"");
+                CommandLogContext.setError("voice_channel_not_found");
+            }
             else if (list.size()>1)
+            {
                 event.reply(event.getClient().getWarning()+FormatUtil.listOfVChannels(list, event.getArgs()));
+                CommandLogContext.setError("voice_channel_ambiguous");
+            }
             else
             {
                 s.setVoiceChannel(list.get(0));
                 event.reply(event.getClient().getSuccess()+" Music can now only be played in "+list.get(0).getAsMention());
+                CommandLogContext.setMeta(new JSONObject().put("before", before).put("after", list.get(0).getId()));
             }
         }
     }

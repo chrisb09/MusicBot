@@ -19,6 +19,8 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -42,9 +44,16 @@ public class PauseCmd extends DJCommand
         if(handler.getPlayer().isPaused())
         {
             event.replyWarning("The player is already paused! Use `"+event.getClient().getPrefix()+"play` to unpause!");
+            CommandLogContext.setError("already_paused");
             return;
         }
         handler.getPlayer().setPaused(true);
         event.replySuccess("Paused **"+handler.getPlayer().getPlayingTrack().getInfo().title+"**. Type `"+event.getClient().getPrefix()+"play` to unpause!");
+        JSONObject meta = new JSONObject()
+                .put("position_ms", handler.getPlayer().getPlayingTrack().getPosition());
+        CommandLogContext.setMeta(meta);
+        if(bot.getDataLogService() != null)
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                    "PAUSE", null, null, null, null, meta.toString());
     }
 }

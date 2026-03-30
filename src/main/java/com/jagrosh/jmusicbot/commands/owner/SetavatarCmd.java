@@ -20,8 +20,10 @@ import java.io.InputStream;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.OtherUtil;
 import net.dv8tion.jda.api.entities.Icon;
+import org.json.JSONObject;
 
 /**
  *
@@ -31,6 +33,7 @@ public class SetavatarCmd extends OwnerCommand
 {
     public SetavatarCmd(Bot bot)
     {
+        super(bot);
         this.name = "setavatar";
         this.help = "sets the avatar of the bot";
         this.arguments = "<url>";
@@ -39,8 +42,9 @@ public class SetavatarCmd extends OwnerCommand
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
+        CommandLogContext.setManualLogging();
         String url;
         if(event.getArgs().isEmpty())
             if(!event.getMessage().getAttachments().isEmpty() && event.getMessage().getAttachments().get(0).isImage())
@@ -53,16 +57,33 @@ public class SetavatarCmd extends OwnerCommand
         if(s==null)
         {
             event.reply(event.getClient().getError()+" Invalid or missing URL");
+            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "invalid_avatar_url"));
         }
         else
         {
             try {
             event.getSelfUser().getManager().setAvatar(Icon.from(s)).queue(
-                    v -> event.reply(event.getClient().getSuccess()+" Successfully changed avatar."), 
-                    t -> event.reply(event.getClient().getError()+" Failed to set avatar."));
+                    v -> {
+                        event.reply(event.getClient().getSuccess()+" Successfully changed avatar.");
+                        logCommandEvent(event, "OK", new JSONObject()
+                                .put("source", event.getArgs().isEmpty() ? "attachment" : "url"));
+                    }, 
+                    t -> {
+                        event.reply(event.getClient().getError()+" Failed to set avatar.");
+                        logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "avatar_set_failed"));
+                    });
             } catch(IOException e) {
                 event.reply(event.getClient().getError()+" Could not load from provided URL.");
+                logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "avatar_load_failed"));
             }
         }
+    }
+
+    private void logCommandEvent(CommandEvent event, String result, JSONObject meta)
+    {
+        if(bot.getDataLogService() == null || event == null || event.getGuild() == null)
+            return;
+        bot.getDataLogService().logCommandEvent(event.getGuild(), event.getAuthor(), getName(),
+                event.getArgs(), result, meta == null ? null : meta.toString());
     }
 }

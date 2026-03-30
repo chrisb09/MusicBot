@@ -6,7 +6,9 @@ import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.QueuedTrack;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.queue.AbstractQueue;
+import org.json.JSONObject;
 
 /**
  * Command that provides users the ability to move a track in the playlist.
@@ -34,6 +36,7 @@ public class MoveTrackCmd extends DJCommand
         if(parts.length < 2)
         {
             event.replyError("Please include two valid indexes.");
+            CommandLogContext.setError("missing_indexes");
             return;
         }
 
@@ -46,12 +49,14 @@ public class MoveTrackCmd extends DJCommand
         catch (NumberFormatException e)
         {
             event.replyError("Please provide two valid indexes.");
+            CommandLogContext.setError("invalid_indexes");
             return;
         }
 
         if (from == to)
         {
             event.replyError("Can't move a track to the same position.");
+            CommandLogContext.setError("same_position");
             return;
         }
 
@@ -62,20 +67,32 @@ public class MoveTrackCmd extends DJCommand
         {
             String reply = String.format("`%d` is not a valid position in the queue!", from);
             event.replyError(reply);
+            CommandLogContext.setError("invalid_from_position");
             return;
         }
         if (isUnavailablePosition(queue, to))
         {
             String reply = String.format("`%d` is not a valid position in the queue!", to);
             event.replyError(reply);
+            CommandLogContext.setError("invalid_to_position");
             return;
         }
 
         // Move the track
+        int sizeBefore = queue.size();
         QueuedTrack track = queue.moveItem(from - 1, to - 1);
         String trackTitle = track.getTrack().getInfo().title;
         String reply = String.format("Moved **%s** from position `%d` to `%d`.", trackTitle, from, to);
         event.replySuccess(reply);
+        JSONObject meta = new JSONObject()
+                .put("position_from", from)
+                .put("position_to", to)
+                .put("queue_size_before", sizeBefore)
+                .put("queue_size_after", queue.size());
+        CommandLogContext.setMeta(meta);
+        if(bot.getDataLogService() != null)
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), track.getTrack(),
+                    "MOVE", null, to, null, null, meta.toString());
     }
 
     private static boolean isUnavailablePosition(AbstractQueue<QueuedTrack> queue, int position)

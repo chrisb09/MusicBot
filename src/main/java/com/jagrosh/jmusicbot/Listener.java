@@ -125,6 +125,8 @@ public class Listener extends ListenerAdapter
     public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event)
     {
         bot.getAloneInVoiceHandler().onVoiceUpdate(event);
+        if(bot.getDataLogService() != null)
+            bot.getDataLogService().onVoiceUpdate(event);
     }
 
     @Override

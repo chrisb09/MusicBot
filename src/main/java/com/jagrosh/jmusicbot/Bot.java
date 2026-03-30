@@ -23,6 +23,7 @@ import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.NowplayingHandler;
 import com.jagrosh.jmusicbot.audio.PlayerManager;
 import com.jagrosh.jmusicbot.audio.StatusMessageHandler;
+import com.jagrosh.jmusicbot.datalog.DataLogService;
 import com.jagrosh.jmusicbot.gui.GUI;
 import com.jagrosh.jmusicbot.playlist.PlaylistLoader;
 import com.jagrosh.jmusicbot.settings.SettingsManager;
@@ -47,6 +48,7 @@ public class Bot
     private final NowplayingHandler nowplaying;
     private final StatusMessageHandler statusMessageHandler;
     private final AloneInVoiceHandler aloneInVoiceHandler;
+    private final DataLogService dataLogService;
     private final YoutubeOauth2TokenHandler youTubeOauth2TokenHandler;
     
     private boolean shuttingDown = false;
@@ -70,6 +72,19 @@ public class Bot
         this.statusMessageHandler.init();
         this.aloneInVoiceHandler = new AloneInVoiceHandler(this);
         this.aloneInVoiceHandler.init();
+        DataLogService dls = null;
+        if(config.getDataLogEnabled())
+        {
+            try
+            {
+                dls = new DataLogService(this, config.getDataLogJdbcUrl(), config.getDataLogUser(), config.getDataLogPassword());
+            }
+            catch(Exception ex)
+            {
+                dls = null;
+            }
+        }
+        this.dataLogService = dls;
     }
     
     public BotConfig getConfig()
@@ -115,6 +130,11 @@ public class Bot
     public AloneInVoiceHandler getAloneInVoiceHandler()
     {
         return aloneInVoiceHandler;
+    }
+
+    public DataLogService getDataLogService()
+    {
+        return dataLogService;
     }
 
     public YoutubeOauth2TokenHandler getYouTubeOauth2Handler()
@@ -163,6 +183,8 @@ public class Bot
         }
         if(gui!=null)
             gui.dispose();
+        if(dataLogService != null)
+            dataLogService.shutdown();
         System.exit(0);
     }
 

@@ -18,6 +18,8 @@ package com.jagrosh.jmusicbot.commands.owner;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -25,11 +27,9 @@ import com.jagrosh.jmusicbot.commands.OwnerCommand;
  */
 public class ShutdownCmd extends OwnerCommand
 {
-    private final Bot bot;
-    
     public ShutdownCmd(Bot bot)
     {
-        this.bot = bot;
+        super(bot);
         this.name = "shutdown";
         this.help = "safely shuts down";
         this.aliases = bot.getConfig().getAliases(this.name);
@@ -37,8 +37,9 @@ public class ShutdownCmd extends OwnerCommand
     }
     
     @Override
-    protected void execute(CommandEvent event)
+    public void doCommand(CommandEvent event)
     {
+        CommandLogContext.setMeta(new JSONObject().put("invoked", true));
         event.replyWarning("Shutting down...");
         bot.shutdown();
     }

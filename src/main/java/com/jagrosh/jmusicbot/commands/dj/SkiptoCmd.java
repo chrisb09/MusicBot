@@ -19,6 +19,8 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -47,16 +49,27 @@ public class SkiptoCmd extends DJCommand
         catch(NumberFormatException e)
         {
             event.reply(event.getClient().getError()+" `"+event.getArgs()+"` is not a valid integer!");
+            CommandLogContext.setError("invalid_index");
             return;
         }
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
         if(index<1 || index>handler.getQueue().size())
         {
             event.reply(event.getClient().getError()+" Position must be a valid integer between 1 and "+handler.getQueue().size()+"!");
+            CommandLogContext.setError("index_out_of_range");
             return;
         }
+        int sizeBefore = handler.getQueue().size();
         handler.getQueue().skip(index-1);
         event.reply(event.getClient().getSuccess()+" Skipped to **"+handler.getQueue().get(0).getTrack().getInfo().title+"**");
+        JSONObject meta = new JSONObject()
+                .put("position_to", index)
+                .put("queue_size_before", sizeBefore)
+                .put("queue_size_after", handler.getQueue().size());
+        CommandLogContext.setMeta(meta);
+        if(bot.getDataLogService() != null)
+            bot.getDataLogService().logQueueEventWithMeta(event.getGuild(), event.getAuthor(), handler.getPlayer().getPlayingTrack(),
+                    "SKIP_SKIPTO", null, index, null, null, meta.toString());
         handler.getPlayer().stopTrack();
     }
 }

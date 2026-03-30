@@ -19,12 +19,14 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jdautilities.commons.JDAUtilitiesInfo;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.OtherUtil;
 import com.sedmelluq.discord.lavaplayer.tools.PlayerLibrary;
 import net.dv8tion.jda.api.JDAInfo;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.utils.FileUpload;
+import org.json.JSONObject;
 
 /**
  *
@@ -35,11 +37,9 @@ public class DebugCmd extends OwnerCommand
     private final static String[] PROPERTIES = {"java.version", "java.vm.name", "java.vm.specification.version", 
         "java.runtime.name", "java.runtime.version", "java.specification.version",  "os.arch", "os.name"};
     
-    private final Bot bot;
-    
     public DebugCmd(Bot bot)
     {
-        this.bot = bot;
+        super(bot);
         this.name = "debug";
         this.help = "shows debug info";
         this.aliases = bot.getConfig().getAliases(this.name);
@@ -47,8 +47,9 @@ public class DebugCmd extends OwnerCommand
     }
 
     @Override
-    protected void execute(CommandEvent event)
+    public void doCommand(CommandEvent event)
     {
+        CommandLogContext.setMeta(new JSONObject().put("channel_type", event.getChannelType().name()));
         StringBuilder sb = new StringBuilder();
         sb.append("```\nSystem Properties:");
         for(String key: PROPERTIES)

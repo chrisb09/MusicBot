@@ -15,9 +15,10 @@
  */
 package com.jagrosh.jmusicbot.commands.general;
 
-import com.jagrosh.jdautilities.command.Command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
+import com.jagrosh.jmusicbot.commands.LoggedCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.QueueType;
 import com.jagrosh.jmusicbot.settings.RepeatMode;
 import com.jagrosh.jmusicbot.settings.Settings;
@@ -27,17 +28,19 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import org.json.JSONObject;
 
 /**
  *
  * @author John Grosh <john.a.grosh@gmail.com>
  */
-public class SettingsCmd extends Command 
+public class SettingsCmd extends LoggedCommand 
 {
     private final static String EMOJI = "\uD83C\uDFA7"; // 🎧
     
     public SettingsCmd(Bot bot)
     {
+        super(bot);
         this.name = "settings";
         this.help = "shows the bots settings";
         this.aliases = bot.getConfig().getAliases(this.name);
@@ -45,9 +48,18 @@ public class SettingsCmd extends Command
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         Settings s = event.getClient().getSettingsFor(event.getGuild());
+        JSONObject meta = new JSONObject()
+                .put("repeat_mode", s.getRepeatMode().name())
+                .put("queue_type", s.getQueueType().name())
+                .put("has_default_playlist", s.getDefaultPlaylist() != null)
+                .put("has_custom_prefix", s.getPrefix() != null)
+                .put("has_text_channel", s.getTextChannel(event.getGuild()) != null)
+                .put("has_voice_channel", s.getVoiceChannel(event.getGuild()) != null)
+                .put("has_dj_role", s.getRole(event.getGuild()) != null);
+        CommandLogContext.setMeta(meta);
         MessageCreateBuilder builder = new MessageCreateBuilder()
                 .addContent(EMOJI + " **")
                 .addContent(FormatUtil.filter(event.getSelfUser().getName()))

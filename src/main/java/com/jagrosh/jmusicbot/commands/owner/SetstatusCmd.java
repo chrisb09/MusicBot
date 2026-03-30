@@ -18,7 +18,9 @@ package com.jagrosh.jmusicbot.commands.owner;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import net.dv8tion.jda.api.OnlineStatus;
+import org.json.JSONObject;
 
 /**
  *
@@ -28,6 +30,7 @@ public class SetstatusCmd extends OwnerCommand
 {
     public SetstatusCmd(Bot bot)
     {
+        super(bot);
         this.name = "setstatus";
         this.help = "sets the status the bot displays";
         this.arguments = "<status>";
@@ -36,21 +39,27 @@ public class SetstatusCmd extends OwnerCommand
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         try {
             OnlineStatus status = OnlineStatus.fromKey(event.getArgs());
             if(status==OnlineStatus.UNKNOWN)
             {
                 event.replyError("Please include one of the following statuses: `ONLINE`, `IDLE`, `DND`, `INVISIBLE`");
+                CommandLogContext.setError("invalid_status");
             }
             else
             {
+                OnlineStatus before = event.getJDA().getPresence().getStatus();
                 event.getJDA().getPresence().setStatus(status);
                 event.replySuccess("Set the status to `"+status.getKey().toUpperCase()+"`");
+                CommandLogContext.setMeta(new JSONObject()
+                        .put("before", before == null ? JSONObject.NULL : before.getKey())
+                        .put("after", status.getKey()));
             }
         } catch(Exception e) {
             event.reply(event.getClient().getError()+" The status could not be set!");
+            CommandLogContext.setError("set_status_failed");
         }
     }
 }

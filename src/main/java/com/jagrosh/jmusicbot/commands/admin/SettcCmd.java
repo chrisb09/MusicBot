@@ -20,9 +20,11 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jdautilities.commons.utils.FinderUtil;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.AdminCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.Settings;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import org.json.JSONObject;
 
 /**
  *
@@ -32,6 +34,7 @@ public class SettcCmd extends AdminCommand
 {
     public SettcCmd(Bot bot)
     {
+        super(bot);
         this.name = "settc";
         this.help = "sets the text channel for music commands";
         this.arguments = "<channel|NONE>";
@@ -39,31 +42,41 @@ public class SettcCmd extends AdminCommand
     }
     
     @Override
-    protected void execute(CommandEvent event) 
+    public void doCommand(CommandEvent event) 
     {
         if(event.getArgs().isEmpty())
         {
             event.reply(event.getClient().getError()+" Please include a text channel or NONE");
+            CommandLogContext.setError("missing_text_channel");
             return;
         }
         Settings s = event.getClient().getSettingsFor(event.getGuild());
+        String before = s.getTextChannel(event.getGuild()) == null ? null : s.getTextChannel(event.getGuild()).getId();
         if(event.getArgs().equalsIgnoreCase("none"))
         {
             s.setTextChannel(null);
             event.reply(event.getClient().getSuccess()+" Music commands can now be used in any channel");
+            CommandLogContext.setMeta(new JSONObject().put("before", before).put("after", JSONObject.NULL));
         }
         else
         {
             @SuppressWarnings({"unchecked", "rawtypes"})
             List<TextChannel> list = (List) FinderUtil.findTextChannels(event.getArgs(), event.getGuild());
             if(list.isEmpty())
+            {
                 event.reply(event.getClient().getWarning()+" No Text Channels found matching \""+event.getArgs()+"\"");
+                CommandLogContext.setError("text_channel_not_found");
+            }
             else if (list.size()>1)
+            {
                 event.reply(event.getClient().getWarning()+FormatUtil.listOfTChannels(list, event.getArgs()));
+                CommandLogContext.setError("text_channel_ambiguous");
+            }
             else
             {
                 s.setTextChannel(list.get(0));
                 event.reply(event.getClient().getSuccess()+" Music commands can now only be used in <#"+list.get(0).getId()+">");
+                CommandLogContext.setMeta(new JSONObject().put("before", before).put("after", list.get(0).getId()));
             }
         }
     }

@@ -29,15 +29,17 @@ import java.util.regex.Pattern;
  */
 public class RequestMetadata
 {
-    public static final RequestMetadata EMPTY = new RequestMetadata(null, null);
+    public static final RequestMetadata EMPTY = new RequestMetadata(null, null, null);
     
     public final UserInfo user;
     public final RequestInfo requestInfo;
+    public final QueueInfo queueInfo;
     
-    public RequestMetadata(User user, RequestInfo requestInfo)
+    public RequestMetadata(User user, RequestInfo requestInfo, QueueInfo queueInfo)
     {
         this.user = user == null ? null : new UserInfo(user.getIdLong(), user.getName(), user.getDiscriminator(), user.getEffectiveAvatarUrl());
         this.requestInfo = requestInfo;
+        this.queueInfo = queueInfo;
     }
     
     public long getOwner()
@@ -47,7 +49,20 @@ public class RequestMetadata
 
     public static RequestMetadata fromResultHandler(AudioTrack track, CommandEvent event)
     {
-        return new RequestMetadata(event.getAuthor(), new RequestInfo(event.getArgs(), track.getInfo().uri));
+        return new RequestMetadata(event.getAuthor(), new RequestInfo(event.getArgs(), track.getInfo().uri),
+                new QueueInfo("PLAY", null, event.getArgs(), System.currentTimeMillis()));
+    }
+
+    public static RequestMetadata fromResultHandler(AudioTrack track, CommandEvent event, String source, String playlistName, String searchQuery)
+    {
+        return new RequestMetadata(event.getAuthor(), new RequestInfo(event.getArgs(), track.getInfo().uri),
+                new QueueInfo(source, playlistName, searchQuery, System.currentTimeMillis()));
+    }
+
+    public static RequestMetadata fromDefaultPlaylist(String playlistName)
+    {
+        return new RequestMetadata(null, new RequestInfo(playlistName, null),
+                new QueueInfo("DEFAULT_PLAYLIST", playlistName, null, System.currentTimeMillis()));
     }
     
     public static class RequestInfo
@@ -70,8 +85,26 @@ public class RequestMetadata
         private static final Pattern youtubeTimestampPattern = Pattern.compile("youtu(?:\\.be|be\\..+)/.*\\?.*(?!.*list=)t=([\\dhms]+)");
         private static long tryGetTimestamp(String url)
         {
+            if(url == null || url.isEmpty())
+                return 0;
             Matcher matcher = youtubeTimestampPattern.matcher(url);
             return matcher.find() ? TimeUtil.parseUnitTime(matcher.group(1)) : 0;
+        }
+    }
+
+    public static class QueueInfo
+    {
+        public final String source;
+        public final String playlistName;
+        public final String searchQuery;
+        public final long queuedAt;
+
+        public QueueInfo(String source, String playlistName, String searchQuery, long queuedAt)
+        {
+            this.source = source;
+            this.playlistName = playlistName;
+            this.searchQuery = searchQuery;
+            this.queuedAt = queuedAt;
         }
     }
     

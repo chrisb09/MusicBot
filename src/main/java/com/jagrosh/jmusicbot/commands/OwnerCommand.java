@@ -16,6 +16,10 @@
 package com.jagrosh.jmusicbot.commands;
 
 import com.jagrosh.jdautilities.command.Command;
+import com.jagrosh.jdautilities.command.CommandEvent;
+import com.jagrosh.jmusicbot.Bot;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
+import org.json.JSONObject;
 
 /**
  *
@@ -23,9 +27,48 @@ import com.jagrosh.jdautilities.command.Command;
  */
 public abstract class OwnerCommand extends Command
 {
-    public OwnerCommand()
+    protected final Bot bot;
+
+    public OwnerCommand(Bot bot)
     {
+        this.bot = bot;
         this.category = new Category("Owner");
         this.ownerCommand = true;
+    }
+
+    @Override
+    protected final void execute(CommandEvent event)
+    {
+        CommandLogContext.clear();
+        try
+        {
+            doCommand(event);
+            CommandLogContext.CommandLogEntry entry = CommandLogContext.consume();
+            if(entry != null && entry.manual)
+                return;
+            String result = entry == null || entry.result == null ? "OK" : entry.result;
+            JSONObject meta = entry == null ? null : entry.meta;
+            logCommand(event, result, meta);
+        }
+        catch(Exception ex)
+        {
+            CommandLogContext.CommandLogEntry entry = CommandLogContext.consume();
+            JSONObject meta = entry == null ? null : entry.meta;
+            if(meta == null)
+                meta = new JSONObject();
+            meta.put("error_reason", ex.getClass().getSimpleName());
+            logCommand(event, "ERROR", meta);
+            throw ex;
+        }
+    }
+
+    public abstract void doCommand(CommandEvent event);
+
+    protected void logCommand(CommandEvent event, String result, JSONObject meta)
+    {
+        if(bot.getDataLogService() == null || event == null || event.getGuild() == null)
+            return;
+        bot.getDataLogService().logCommandEvent(event.getGuild(), event.getAuthor(), getName(),
+                event.getArgs(), result, meta == null ? null : meta.toString());
     }
 }

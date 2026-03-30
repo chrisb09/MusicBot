@@ -29,9 +29,11 @@ import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.QueuedTrack;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
+import org.json.JSONObject;
 
 /**
  *
@@ -64,9 +66,11 @@ public class SearchCmd extends MusicCommand
     @Override
     public void doCommand(CommandEvent event) 
     {
+        CommandLogContext.setManualLogging();
         if(event.getArgs().isEmpty())
         {
             event.replyError("Please include a query.");
+            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "missing_query"));
             return;
         }
         event.reply(searchingEmoji+" Searching... `["+event.getArgs()+"]`", 
@@ -91,13 +95,21 @@ public class SearchCmd extends MusicCommand
             {
                 m.editMessage(FormatUtil.filter(event.getClient().getWarning()+" This track (**"+track.getInfo().title+"**) is longer than the allowed maximum: `"
                         + TimeUtil.formatTime(track.getDuration())+"` > `"+bot.getConfig().getMaxTime()+"`")).queue();
+                logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "track_too_long"));
                 return;
             }
             AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-            int pos = handler.addTrack(new QueuedTrack(track, RequestMetadata.fromResultHandler(track, event)))+1;
+            RequestMetadata rm = RequestMetadata.fromResultHandler(track, event, "SEARCH", null, event.getArgs());
+            int pos = handler.addTrack(new QueuedTrack(track, rm))+1;
+            if(bot.getDataLogService() != null)
+            {
+                bot.getDataLogService().logSearchSelection(event.getGuild(), event.getAuthor(), event.getArgs(), 1, track);
+                bot.getDataLogService().logQueueAdd(event.getGuild(), event.getAuthor(), track, "SEARCH", pos, event.getArgs(), null);
+            }
             m.editMessage(FormatUtil.filter(event.getClient().getSuccess()+" Added **"+track.getInfo().title
                     +"** (`"+ TimeUtil.formatTime(track.getDuration())+"`) "+(pos==0 ? "to begin playing"
                         : " to the queue at position "+pos))).queue();
+            logCommandEvent(event, "OK", new JSONObject().put("queue_position", pos).put("selected_index", 1));
         }
 
         @Override
@@ -113,10 +125,17 @@ public class SearchCmd extends MusicCommand
                         {
                             event.replyWarning("This track (**"+track.getInfo().title+"**) is longer than the allowed maximum: `"
                                     + TimeUtil.formatTime(track.getDuration())+"` > `"+bot.getConfig().getMaxTime()+"`");
+                            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "track_too_long"));
                             return;
                         }
                         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-                        int pos = handler.addTrack(new QueuedTrack(track, RequestMetadata.fromResultHandler(track, event)))+1;
+                        RequestMetadata rm = RequestMetadata.fromResultHandler(track, event, "SEARCH", null, event.getArgs());
+                        int pos = handler.addTrack(new QueuedTrack(track, rm))+1;
+                        if(bot.getDataLogService() != null)
+                        {
+                            bot.getDataLogService().logSearchSelection(event.getGuild(), event.getAuthor(), event.getArgs(), i, track);
+                            bot.getDataLogService().logQueueAdd(event.getGuild(), event.getAuthor(), track, "SEARCH", pos, event.getArgs(), null);
+                        }
                         event.replySuccess("Added **" + FormatUtil.filter(track.getInfo().title)
                                 + "** (`" + TimeUtil.formatTime(track.getDuration()) + "`) " + (pos==0 ? "to begin playing" 
                                     : " to the queue at position "+pos));
@@ -130,12 +149,17 @@ public class SearchCmd extends MusicCommand
                 builder.addChoices("`["+ TimeUtil.formatTime(track.getDuration())+"]` [**"+track.getInfo().title+"**]("+track.getInfo().uri+")");
             }
             builder.build().display(m);
+            logCommandEvent(event, "OK", new JSONObject().put("result_count", playlist.getTracks().size()));
         }
 
         @Override
         public void noMatches() 
         {
             m.editMessage(FormatUtil.filter(event.getClient().getWarning()+" No results found for `"+event.getArgs()+"`.")).queue();
+            if(bot.getDataLogService() != null)
+                bot.getDataLogService().logSearchEventWithMeta(event.getGuild(), event.getAuthor(), event.getArgs(), null, null,
+                        new JSONObject().put("error_reason", "no_matches").toString());
+            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "no_matches"));
         }
 
         @Override
@@ -145,6 +169,18 @@ public class SearchCmd extends MusicCommand
                 m.editMessage(event.getClient().getError()+" Error loading: "+throwable.getMessage()).queue();
             else
                 m.editMessage(event.getClient().getError()+" Error loading track.").queue();
+            if(bot.getDataLogService() != null)
+                bot.getDataLogService().logSearchEventWithMeta(event.getGuild(), event.getAuthor(), event.getArgs(), null, null,
+                        new JSONObject().put("error_reason", throwable.getMessage()).toString());
+            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", throwable.getMessage()));
         }
+    }
+
+    private void logCommandEvent(CommandEvent event, String result, JSONObject meta)
+    {
+        if(bot.getDataLogService() == null || event == null || event.getGuild() == null)
+            return;
+        bot.getDataLogService().logCommandEvent(event.getGuild(), event.getAuthor(), getName(),
+                event.getArgs(), result, meta == null ? null : meta.toString());
     }
 }

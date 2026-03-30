@@ -19,8 +19,10 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.Settings;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import org.json.JSONObject;
 
 /**
  *
@@ -46,6 +48,7 @@ public class VolumeCmd extends DJCommand
         if(event.getArgs().isEmpty())
         {
             event.reply(FormatUtil.volumeIcon(volume)+" Current volume is `"+volume+"`");
+            CommandLogContext.setMeta(new JSONObject().put("current", volume));
         }
         else
         {
@@ -56,12 +59,16 @@ public class VolumeCmd extends DJCommand
                 nvolume = -1;
             }
             if(nvolume<0 || nvolume>150)
+            {
                 event.reply(event.getClient().getError()+" Volume must be a valid integer between 0 and 150!");
+                CommandLogContext.setError("invalid_volume");
+            }
             else
             {
                 handler.getPlayer().setVolume(nvolume);
                 settings.setVolume(nvolume);
                 event.reply(FormatUtil.volumeIcon(nvolume)+" Volume changed from `"+volume+"` to `"+nvolume+"`");
+                CommandLogContext.setMeta(new JSONObject().put("before", volume).put("after", nvolume));
             }
         }
     }

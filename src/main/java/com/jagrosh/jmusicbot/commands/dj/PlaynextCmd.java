@@ -21,6 +21,7 @@ import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.QueuedTrack;
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.DJCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
 import com.jagrosh.jmusicbot.utils.TimeUtil;
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
@@ -28,6 +29,7 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Message;
+import org.json.JSONObject;
 
 /**
  *
@@ -52,9 +54,11 @@ public class PlaynextCmd extends DJCommand
     @Override
     public void doCommand(CommandEvent event)
     {
+        CommandLogContext.setManualLogging();
         if(event.getArgs().isEmpty() && event.getMessage().getAttachments().isEmpty())
         {
             event.replyWarning("Please include a song title or URL!");
+            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "missing_query"));
             return;
         }
         String args = event.getArgs().startsWith("<") && event.getArgs().endsWith(">") 
@@ -82,13 +86,18 @@ public class PlaynextCmd extends DJCommand
             {
                 m.editMessage(FormatUtil.filter(event.getClient().getWarning()+" This track (**"+track.getInfo().title+"**) is longer than the allowed maximum: `"
                         + TimeUtil.formatTime(track.getDuration())+"` > `"+ TimeUtil.formatTime(bot.getConfig().getMaxSeconds()*1000)+"`")).queue();
+                logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "track_too_long"));
                 return;
             }
             AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-            int pos = handler.addTrackToFront(new QueuedTrack(track, RequestMetadata.fromResultHandler(track, event)))+1;
+            RequestMetadata rm = RequestMetadata.fromResultHandler(track, event, "PLAYNEXT", null, event.getArgs());
+            int pos = handler.addTrackToFront(new QueuedTrack(track, rm))+1;
+            if(bot.getDataLogService() != null)
+                bot.getDataLogService().logQueueAdd(event.getGuild(), event.getAuthor(), track, "PLAYNEXT", pos, event.getArgs(), null);
             String addMsg = FormatUtil.filter(event.getClient().getSuccess()+" Added **"+track.getInfo().title
                     +"** (`"+ TimeUtil.formatTime(track.getDuration())+"`) "+(pos==0?"to begin playing":" to the queue at position "+pos));
             m.editMessage(addMsg).queue();
+            logCommandEvent(event, "OK", new JSONObject().put("queue_position", pos));
         }
         
         @Override
@@ -114,7 +123,10 @@ public class PlaynextCmd extends DJCommand
         public void noMatches()
         {
             if(ytsearch)
+            {
                 m.editMessage(FormatUtil.filter(event.getClient().getWarning()+" No results found for `"+event.getArgs()+"`.")).queue();
+                logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", "no_matches"));
+            }
             else
                 bot.getPlayerManager().loadItemOrdered(event.getGuild(), "ytsearch:"+event.getArgs(), new ResultHandler(m,event,true));
         }
@@ -126,6 +138,15 @@ public class PlaynextCmd extends DJCommand
                 m.editMessage(event.getClient().getError()+" Error loading: "+throwable.getMessage()).queue();
             else
                 m.editMessage(event.getClient().getError()+" Error loading track.").queue();
+            logCommandEvent(event, "ERROR", new JSONObject().put("error_reason", throwable.getMessage()));
         }
+    }
+
+    private void logCommandEvent(CommandEvent event, String result, JSONObject meta)
+    {
+        if(bot.getDataLogService() == null || event == null || event.getGuild() == null)
+            return;
+        bot.getDataLogService().logCommandEvent(event.getGuild(), event.getAuthor(), getName(),
+                event.getArgs(), result, meta == null ? null : meta.toString());
     }
 }

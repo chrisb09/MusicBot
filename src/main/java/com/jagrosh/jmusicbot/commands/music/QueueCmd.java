@@ -23,6 +23,7 @@ import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.QueuedTrack;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import com.jagrosh.jmusicbot.datalog.CommandLogContext;
 import com.jagrosh.jmusicbot.settings.QueueType;
 import com.jagrosh.jmusicbot.settings.RepeatMode;
 import com.jagrosh.jmusicbot.settings.Settings;
@@ -33,6 +34,7 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.exceptions.PermissionException;
+import org.json.JSONObject;
 
 /**
  *
@@ -86,6 +88,7 @@ public class QueueCmd extends MusicCommand
                 if(nowp!=null)
                     bot.getNowplayingHandler().setLastNPMessage(m);
             });
+            CommandLogContext.setMeta(new JSONObject().put("queue_size", 0));
             return;
         }
         String[] songs = new String[list.size()];
@@ -97,6 +100,11 @@ public class QueueCmd extends MusicCommand
         }
         Settings settings = event.getClient().getSettingsFor(event.getGuild());
         long fintotal = total;
+        CommandLogContext.setMeta(new JSONObject()
+                .put("queue_size", list.size())
+                .put("total_ms", total)
+                .put("repeat_mode", settings.getRepeatMode().name())
+                .put("queue_type", settings.getQueueType().name()));
         builder.setText((i1,i2) -> getQueueTitle(ah, event.getClient().getSuccess(), songs.length, fintotal, settings.getRepeatMode(), settings.getQueueType()))
                 .setItems(songs)
                 .setUsers(event.getAuthor())
