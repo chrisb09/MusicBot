@@ -50,6 +50,7 @@ public class BotConfig
     private YouTubeUtil.RoutingPlanner ytRoutingPlanner;
     private List<IpBlock> ytIpBlocks;
     private boolean youtubeOauth2, stayInChannel, songInGame, npImages, updatealerts, chromeHeadless, useEval, dbots;
+    private boolean statusMessages;
     private long owner, maxSeconds, aloneTimeUntilStop;
     private int maxYTPlaylistPages;
     private double skipratio;
@@ -94,6 +95,7 @@ public class BotConfig
             youtubeOauth2 = config.getBoolean("youtubeoauth2");
             stayInChannel = config.getBoolean("stayinchannel");
             songInGame = config.getBoolean("songinstatus");
+            statusMessages = config.getBoolean("statusmessages");
             npImages = config.getBoolean("npimages");
             updatealerts = config.getBoolean("updatealerts");
             logLevel = config.getString("loglevel");
@@ -112,7 +114,6 @@ public class BotConfig
             transforms = config.getConfig("transforms");
             skipratio = config.getDouble("skipratio");
             dbots = owner == 113156185389092864L;
-            
             // we may need to write a new config file
             boolean write = false;
 
@@ -260,7 +261,7 @@ public class BotConfig
     {
         return owner;
     }
-    
+
     public String getSuccess()
     {
         return successEmoji;
@@ -319,6 +320,11 @@ public class BotConfig
     public boolean getSongInStatus()
     {
         return songInGame;
+    }
+
+    public boolean useStatusMessages()
+    {
+        return statusMessages;
     }
     
     public String getPlaylistsFolder()

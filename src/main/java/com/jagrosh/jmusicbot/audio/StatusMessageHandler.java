@@ -27,11 +27,16 @@ import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.requests.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
 
 public class StatusMessageHandler
 {
+    private static final Logger LOG = LoggerFactory.getLogger("StatusMessage");
     private final Bot bot;
     private final Map<Long, StatusState> states;
 
@@ -43,15 +48,21 @@ public class StatusMessageHandler
 
     public void init()
     {
+        if(!bot.getConfig().useStatusMessages())
+            return;
         bot.getThreadpool().scheduleWithFixedDelay(() -> updateAll(), 0, 1, TimeUnit.SECONDS);
     }
 
     public void onMessageReceived(MessageReceivedEvent event)
     {
+        if(!bot.getConfig().useStatusMessages())
+            return;
         if(!event.isFromGuild())
             return;
         Guild guild = event.getGuild();
         StatusState state = states.computeIfAbsent(guild.getIdLong(), id -> new StatusState());
+        synchronized(state)
+        {
         MessageChannelUnion channelUnion = event.getChannel();
         if(channelUnion == null || channelUnion.getType() != ChannelType.TEXT)
             return;
@@ -78,6 +89,7 @@ public class StatusMessageHandler
             long selfId = bot.getJDA().getSelfUser().getIdLong();
             if(event.getAuthor().getIdLong() == selfId)
             {
+                debug(guild, state, "pending_repost_trigger", "author_is_self", event.getMessageIdLong());
                 repostStatusMessage(guild, channel, state);
                 state.pendingRepost = false;
             }
@@ -88,26 +100,42 @@ public class StatusMessageHandler
         if(event.getAuthor().getIdLong() == bot.getJDA().getSelfUser().getIdLong() && state.createInFlight)
             return;
 
+        debug(guild, state, "repost_due_to_message", "message_author", event.getAuthor().getIdLong());
         repostStatusMessage(guild, channel, state);
+        }
     }
 
     public void onMessageDelete(Guild guild, long messageId)
     {
+        if(!bot.getConfig().useStatusMessages())
+            return;
         StatusState state = states.get(guild.getIdLong());
         if(state == null)
             return;
-        if(state.messageId == messageId)
-            state.messageId = 0L;
+        synchronized(state)
+        {
+            if(state.createInFlight)
+            {
+                debug(guild, state, "delete_ignored_in_flight", "message", messageId);
+                return;
+            }
+            if(state.messageId == messageId)
+                state.messageId = 0L;
+        }
     }
 
     public void onTrackUpdate(long guildId)
     {
+        if(!bot.getConfig().useStatusMessages())
+            return;
         StatusState state = states.computeIfAbsent(guildId, id -> new StatusState());
         state.forceUpdate = true;
     }
 
     private void updateAll()
     {
+        if(!bot.getConfig().useStatusMessages())
+            return;
         JDA jda = bot.getJDA();
         if(jda == null)
             return;
@@ -115,6 +143,8 @@ public class StatusMessageHandler
         {
             long guildId = entry.getKey();
             StatusState state = entry.getValue();
+            synchronized(state)
+            {
             Guild guild = jda.getGuildById(guildId);
             if(guild == null)
                 continue;
@@ -137,14 +167,22 @@ public class StatusMessageHandler
             MessageCreateData statusMessage = handler.getStatusMessage(jda);
             if(state.messageId == 0L || state.channelId != channel.getIdLong())
             {
+                debug(guild, state, "repost_due_to_missing_or_channel", "channel", channel.getIdLong());
                 repostStatusMessage(guild, channel, state, statusMessage);
             }
             else
             {
-                channel.editMessageById(state.messageId, MessageEditData.fromCreateData(statusMessage))
-                        .queue(m -> {}, t -> state.messageId = 0L);
+                final long editingId = state.messageId;
+                channel.editMessageById(editingId, MessageEditData.fromCreateData(statusMessage))
+                        .queue(m -> {}, t ->
+                        {
+                            debug(guild, state, "edit_failed", t, editingId);
+                            if(state.messageId == editingId && shouldResetMessageId(t))
+                                state.messageId = 0L;
+                        });
             }
             state.forceUpdate = false;
+            }
         }
     }
 
@@ -161,15 +199,18 @@ public class StatusMessageHandler
         if(state.createInFlight)
             return;
         state.createInFlight = true;
+        debug(guild, state, "repost_start", "channel", channel.getIdLong());
         deleteOldStatusMessage(guild, state);
         channel.sendMessage(statusMessage).queue(m ->
         {
             state.channelId = channel.getIdLong();
             state.messageId = m.getIdLong();
             state.createInFlight = false;
+            debug(guild, state, "repost_success", "message", m.getIdLong());
         }, t ->
         {
             state.createInFlight = false;
+            debug(guild, state, "repost_failed", t, 0L);
         });
     }
 
@@ -180,7 +221,35 @@ public class StatusMessageHandler
         TextChannel oldChannel = guild.getTextChannelById(state.channelId);
         if(oldChannel == null)
             return;
-        oldChannel.deleteMessageById(state.messageId).queue(m -> {}, t -> {});
+        oldChannel.deleteMessageById(state.messageId).queue(m -> {}, t -> debug(guild, state, "delete_failed", t, state.messageId));
+    }
+
+    private boolean shouldResetMessageId(Throwable throwable)
+    {
+        if(throwable instanceof ErrorResponseException)
+        {
+            ErrorResponse response = ((ErrorResponseException)throwable).getErrorResponse();
+            return response == ErrorResponse.UNKNOWN_MESSAGE || response == ErrorResponse.UNKNOWN_CHANNEL;
+        }
+        return false;
+    }
+
+    private void debug(Guild guild, StatusState state, String action, String key, long value)
+    {
+        if(LOG.isDebugEnabled())
+            LOG.debug("guild={} action={} {}={} msgId={} chanId={} pending={} inFlight={} force={}",
+                    guild.getId(), action, key, value, state.messageId, state.channelId, state.pendingRepost, state.createInFlight, state.forceUpdate);
+    }
+
+    private void debug(Guild guild, StatusState state, String action, Throwable throwable, long messageId)
+    {
+        if(LOG.isDebugEnabled())
+        {
+            String err = throwable == null ? "null" : throwable.getClass().getSimpleName() + ": " + throwable.getMessage();
+            LOG.debug("guild={} action={} error={} msgId={} chanId={} pending={} inFlight={} force={}",
+                    guild.getId(), action, err, messageId == 0L ? state.messageId : messageId,
+                    state.channelId, state.pendingRepost, state.createInFlight, state.forceUpdate);
+        }
     }
 
     private MessageCreateData getStatusMessage(Guild guild)
