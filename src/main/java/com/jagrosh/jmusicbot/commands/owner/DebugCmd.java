@@ -16,7 +16,6 @@
 package com.jagrosh.jmusicbot.commands.owner;
 
 import com.jagrosh.jdautilities.command.CommandEvent;
-import com.jagrosh.jdautilities.commons.JDAUtilitiesInfo;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.commands.OwnerCommand;
 import com.jagrosh.jmusicbot.datalog.CommandLogContext;
@@ -67,7 +66,7 @@ public class DebugCmd extends OwnerCommand
                 .append("\n  UpdateAlerts = ").append(bot.getConfig().useUpdateAlerts());
         sb.append("\n\nDependency Information:")
                 .append("\n  JDA Version = ").append(JDAInfo.VERSION)
-                .append("\n  JDA-Utilities Version = ").append(JDAUtilitiesInfo.VERSION)
+                .append("\n  JDA-Utilities Version = ").append(OtherUtil.getCommandLibraryVersion())
                 .append("\n  Lavaplayer Version = ").append(PlayerLibrary.VERSION);
         long total = Runtime.getRuntime().totalMemory() / 1024 / 1024;
         long used = total - (Runtime.getRuntime().freeMemory() / 1024 / 1024);

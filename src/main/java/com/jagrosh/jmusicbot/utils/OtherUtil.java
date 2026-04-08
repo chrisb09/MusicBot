@@ -15,6 +15,7 @@
  */
 package com.jagrosh.jmusicbot.utils;
 
+import com.jagrosh.jdautilities.commons.JDAUtilitiesInfo;
 import com.jagrosh.jmusicbot.JMusicBot;
 import com.jagrosh.jmusicbot.entities.Prompt;
 import java.io.*;
@@ -23,6 +24,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Properties;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.OnlineStatus;
@@ -185,6 +187,26 @@ public class OtherUtil
             return JMusicBot.class.getPackage().getImplementationVersion();
         else
             return "UNKNOWN";
+    }
+
+    public static String getCommandLibraryVersion()
+    {
+        try(InputStream input = OtherUtil.class.getResourceAsStream("/com/jagrosh/jmusicbot/versions.properties"))
+        {
+            if(input != null)
+            {
+                Properties properties = new Properties();
+                properties.load(input);
+                String version = properties.getProperty("jda-chewtils.version");
+                if(version != null && !version.trim().isEmpty())
+                    return version.trim();
+            }
+        }
+        catch(IOException ignored) {}
+
+        if(JDAUtilitiesInfo.VERSION_REVISION != null && !JDAUtilitiesInfo.VERSION_REVISION.startsWith("@"))
+            return JDAUtilitiesInfo.VERSION;
+        return JDAUtilitiesInfo.VERSION_MAJOR + "." + JDAUtilitiesInfo.VERSION_MINOR;
     }
     
     public static String getLatestVersion()
