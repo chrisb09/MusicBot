@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jagrosh</groupId>
     <artifactId>JMusicBot</artifactId>
-    <version>0.6.4</version>
+    <version>0.6.5</version>
     <packaging>jar</packaging>
 
     <repositories>
@@ -161,7 +161,7 @@
         <dependency>
             <groupId>dev.lavalink.youtube</groupId>
             <artifactId>common</artifactId>
-            <version>1.16.0</version>
+            <version>1.18.1</version>
         </dependency>
 	<dependency>
 	    <groupId>com.github.jagrosh</groupId>
