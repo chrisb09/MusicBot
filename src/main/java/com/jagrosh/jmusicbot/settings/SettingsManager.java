@@ -60,7 +60,9 @@ public class SettingsManager implements GuildSettingsManager<Settings>
                         o.has("repeat_mode")     ? o.getEnum(RepeatMode.class, "repeat_mode"): RepeatMode.OFF,
                         o.has("prefix")          ? o.getString("prefix")                     : null,
                         o.has("skip_ratio")      ? o.getDouble("skip_ratio")                 : -1,
-                        o.has("queue_type")      ? o.getEnum(QueueType.class, "queue_type")  : QueueType.FAIR));
+                        o.has("queue_type")      ? o.getEnum(QueueType.class, "queue_type")  : QueueType.FAIR,
+                        o.has("stats_report_channel_id") ? o.getString("stats_report_channel_id") : null,
+                        o.has("stats_report_frequency") ? StatsReportFrequency.parse(o.getString("stats_report_frequency")) : StatsReportFrequency.OFF));
             });
         } catch (NoSuchFileException e) {
             // create an empty json file
@@ -97,7 +99,7 @@ public class SettingsManager implements GuildSettingsManager<Settings>
 
     private Settings createDefaultSettings()
     {
-        return new Settings(this, 0, 0, 0, 100, null, RepeatMode.OFF, null, -1, QueueType.FAIR);
+        return new Settings(this, 0, 0, 0, 100, null, RepeatMode.OFF, null, -1, QueueType.FAIR, 0L, StatsReportFrequency.OFF);
     }
 
     protected void writeSettings()
@@ -124,6 +126,10 @@ public class SettingsManager implements GuildSettingsManager<Settings>
                 o.put("skip_ratio", s.getSkipRatio());
             if(s.getQueueType() != QueueType.FAIR)
                 o.put("queue_type", s.getQueueType().name());
+            if(s.getStatsReportChannelId() != 0L)
+                o.put("stats_report_channel_id", Long.toString(s.getStatsReportChannelId()));
+            if(s.getStatsReportFrequency() != StatsReportFrequency.OFF)
+                o.put("stats_report_frequency", s.getStatsReportFrequency().name());
             obj.put(Long.toString(key), o);
         });
         try {

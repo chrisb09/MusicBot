@@ -21,10 +21,15 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import java.sql.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
@@ -257,6 +262,111 @@ public class DataLogService
                 LOG.debug("logCommandEvent failed: {}", ex.getMessage());
             }
         });
+    }
+
+    public long getGuildTrackPlayCount(Guild guild, AudioTrack track)
+    {
+        return getGuildTrackPlayCount(guild, track, StatsTimeRange.all());
+    }
+
+    public long getGuildTrackPlayCount(Guild guild, AudioTrack track, StatsTimeRange range)
+    {
+        if(guild == null || track == null)
+            return 0L;
+        AudioTrackInfo info = track.getInfo();
+        return getGuildTrackPlayCount(guild.getIdLong(), inferSource(info), track.getIdentifier(), range);
+    }
+
+    public long getGuildTrackPlayCount(long guildId, String source, String identifier)
+    {
+        return getGuildTrackPlayCount(guildId, source, identifier, StatsTimeRange.all());
+    }
+
+    public long getGuildTrackPlayCount(long guildId, String source, String identifier, StatsTimeRange range)
+    {
+        if(identifier == null)
+            return 0L;
+        StatsTimeRange effectiveRange = range == null ? StatsTimeRange.all() : range;
+        return query(() ->
+        {
+            StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM play_sessions ps JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=? AND t.source=? AND t.identifier=?");
+            if(effectiveRange.getStartMillis() != null)
+                sql.append(" AND ps.started_at>=?");
+            if(effectiveRange.getEndMillis() != null)
+                sql.append(" AND ps.started_at<?");
+            try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+            {
+                ps.setLong(1, guildId);
+                ps.setString(2, StatsFilters.normalizeSource(source));
+                ps.setString(3, identifier);
+                int index = 4;
+                if(effectiveRange.getStartMillis() != null)
+                    ps.setLong(index++, effectiveRange.getStartMillis());
+                if(effectiveRange.getEndMillis() != null)
+                    ps.setLong(index, effectiveRange.getEndMillis());
+                try(ResultSet rs = ps.executeQuery())
+                {
+                    return rs.next() ? rs.getLong(1) : 0L;
+                }
+            }
+        }, 0L);
+    }
+
+    public StatsSummary getStatsSummary(long guildId, StatsTimeRange range, String source, Long userId)
+    {
+        StatsTimeRange effectiveRange = range == null ? StatsTimeRange.all() : range;
+        String effectiveSource = StatsFilters.normalizeSource(source);
+        return query(() -> buildStatsSummary(guildId, effectiveRange, effectiveSource, userId),
+                new StatsSummary(effectiveRange, effectiveSource, 0L, 0L,
+                        Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
+                        Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
+    }
+
+    public List<StatsRow> getTopRequestedTracks(long guildId, StatsTimeRange range, String source, List<Long> userIds, int limit)
+    {
+        StatsTimeRange effectiveRange = range == null ? StatsTimeRange.all() : range;
+        String effectiveSource = StatsFilters.normalizeSource(source);
+        return query(() -> topRequestedTracks(guildId, effectiveRange, effectiveSource, userIds, Math.max(1, limit)),
+                Collections.emptyList());
+    }
+
+    public List<StatsRow> getTopListenedTracks(long guildId, StatsTimeRange range, String source, List<Long> userIds, int limit)
+    {
+        StatsTimeRange effectiveRange = range == null ? StatsTimeRange.all() : range;
+        String effectiveSource = StatsFilters.normalizeSource(source);
+        return query(() -> topListenedTracks(guildId, effectiveRange, effectiveSource, userIds, Math.max(1, limit)),
+                Collections.emptyList());
+    }
+
+    public List<StatsRow> findUsersByProfile(long guildId, String queryText, int limit)
+    {
+        if(queryText == null || queryText.trim().isEmpty())
+            return Collections.emptyList();
+        String like = "%" + queryText.trim().toLowerCase() + "%";
+        return query(() ->
+        {
+            try(PreparedStatement ps = connection.prepareStatement(
+                    "SELECT up.user_id, COALESCE(up.nickname, up.username) label FROM user_profiles up "
+                            + "WHERE up.guild_id=? AND up.seen_at=(SELECT MAX(seen_at) FROM user_profiles latest WHERE latest.guild_id=up.guild_id AND latest.user_id=up.user_id) "
+                            + "AND (LOWER(COALESCE(up.username, '')) LIKE ? OR LOWER(COALESCE(up.nickname, '')) LIKE ?) "
+                            + "ORDER BY label ASC LIMIT ?"))
+            {
+                ps.setLong(1, guildId);
+                ps.setString(2, like);
+                ps.setString(3, like);
+                ps.setInt(4, Math.max(1, limit));
+                List<StatsRow> rows = new ArrayList<>();
+                try(ResultSet rs = ps.executeQuery())
+                {
+                    while(rs.next())
+                    {
+                        long userId = rs.getLong("user_id");
+                        rows.add(new StatsRow(userId, userLabel(rs.getString("label"), userId), null, 0L, 0L));
+                    }
+                }
+                return rows;
+            }
+        }, Collections.emptyList());
     }
 
     public void logQueueEventWithMeta(Guild guild, User user, AudioTrack track, String eventType, String source, Integer position, String query, String playlistName, String metaJson)
@@ -612,6 +722,360 @@ public class DataLogService
         executor.submit(r);
     }
 
+    private <T> T query(SqlSupplier<T> supplier, T fallback)
+    {
+        Future<T> future = executor.submit(() ->
+        {
+            try
+            {
+                return supplier.get();
+            }
+            catch(SQLException ex)
+            {
+                LOG.debug("stats query failed: {}", ex.getMessage());
+                return fallback;
+            }
+        });
+        try
+        {
+            return future.get(5, TimeUnit.SECONDS);
+        }
+        catch(Exception ex)
+        {
+            future.cancel(true);
+            LOG.debug("stats query timed out or failed: {}", ex.getMessage());
+            return fallback;
+        }
+    }
+
+    private StatsSummary buildStatsSummary(long guildId, StatsTimeRange range, String source, Long userId) throws SQLException
+    {
+        long totalPlays = countPlays(guildId, range, source, userId);
+        long totalListeningMillis = sumListeningMillis(guildId, range, source, userId);
+        return new StatsSummary(range, source, totalPlays, totalListeningMillis,
+                topTracks(guildId, range, source, userId, 10),
+                topUsersFromPlaySessions(guildId, range, source, userId, 10),
+                topListeners(guildId, range, source, userId, 10),
+                topSources(guildId, range, userId, 10),
+                topSkippers(guildId, range, source, userId, true, 10),
+                topSkippers(guildId, range, source, userId, false, 10));
+    }
+
+    private long countPlays(long guildId, StatsTimeRange range, String source, Long userId) throws SQLException
+    {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM play_sessions ps JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, source, userId);
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            bindPlayFilters(ps, 1, guildId, range, source, userId);
+            try(ResultSet rs = ps.executeQuery())
+            {
+                return rs.next() ? rs.getLong(1) : 0L;
+            }
+        }
+    }
+
+    private long sumListeningMillis(long guildId, StatsTimeRange range, String source, Long userId) throws SQLException
+    {
+        String upperBound = boundedListenerUpperExpression();
+        StringBuilder sql = new StringBuilder("SELECT SUM(CASE "
+                + "WHEN " + upperBound + " > MAX(ls.joined_at, COALESCE(ps.started_at, ls.joined_at)) "
+                + "THEN " + upperBound + " - MAX(ls.joined_at, COALESCE(ps.started_at, ls.joined_at)) "
+                + "ELSE 0 END) "
+                + "FROM listener_sessions ls JOIN play_sessions ps ON ls.play_session_id=ps.id JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, source, null);
+        if(userId != null)
+            sql.append(" AND ls.user_id=?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = 1;
+            long now = now();
+            ps.setLong(index++, now);
+            ps.setLong(index++, now);
+            ps.setLong(index++, now);
+            ps.setLong(index++, now);
+            index = bindPlayFilters(ps, index, guildId, range, source, null);
+            if(userId != null)
+                ps.setLong(index, userId);
+            try(ResultSet rs = ps.executeQuery())
+            {
+                return rs.next() ? rs.getLong(1) : 0L;
+            }
+        }
+    }
+
+    private List<StatsRow> topTracks(long guildId, StatsTimeRange range, String source, Long userId, int limit) throws SQLException
+    {
+        StringBuilder sql = new StringBuilder("SELECT t.id, t.title, t.author, COUNT(*) plays FROM play_sessions ps JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, source, userId);
+        sql.append(" GROUP BY t.id, t.title, t.author ORDER BY plays DESC, t.title ASC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = bindPlayFilters(ps, 1, guildId, range, source, userId);
+            ps.setInt(index, limit);
+            List<StatsRow> rows = new ArrayList<>();
+            try(ResultSet rs = ps.executeQuery())
+            {
+                while(rs.next())
+                    rows.add(new StatsRow(rs.getLong("id"), safeLabel(rs.getString("title"), "Unknown track"), rs.getString("author"), rs.getLong("plays"), 0L));
+            }
+            return rows;
+        }
+    }
+
+    private List<StatsRow> topRequestedTracks(long guildId, StatsTimeRange range, String source, List<Long> userIds, int limit) throws SQLException
+    {
+        StringBuilder sql = new StringBuilder("SELECT t.id, t.title, t.author, COUNT(*) plays FROM play_sessions ps JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, source, null);
+        appendUserListFilter(sql, "ps.requested_by", userIds);
+        sql.append(" GROUP BY t.id, t.title, t.author ORDER BY plays DESC, t.title ASC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = bindPlayFilters(ps, 1, guildId, range, source, null);
+            index = bindUserList(ps, index, userIds);
+            ps.setInt(index, limit);
+            List<StatsRow> rows = new ArrayList<>();
+            try(ResultSet rs = ps.executeQuery())
+            {
+                while(rs.next())
+                    rows.add(new StatsRow(rs.getLong("id"), safeLabel(rs.getString("title"), "Unknown track"), rs.getString("author"), rs.getLong("plays"), 0L));
+            }
+            return rows;
+        }
+    }
+
+    private List<StatsRow> topListenedTracks(long guildId, StatsTimeRange range, String source, List<Long> userIds, int limit) throws SQLException
+    {
+        String upperBound = boundedListenerUpperExpression();
+        StringBuilder sql = new StringBuilder("SELECT t.id, t.title, t.author, COUNT(*) listens, "
+                + "SUM(CASE "
+                + "WHEN " + upperBound + " > MAX(ls.joined_at, COALESCE(ps.started_at, ls.joined_at)) "
+                + "THEN " + upperBound + " - MAX(ls.joined_at, COALESCE(ps.started_at, ls.joined_at)) "
+                + "ELSE 0 END) listen_ms "
+                + "FROM listener_sessions ls JOIN play_sessions ps ON ls.play_session_id=ps.id JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, source, null);
+        appendUserListFilter(sql, "ls.user_id", userIds);
+        sql.append(" GROUP BY t.id, t.title, t.author ORDER BY listen_ms DESC, listens DESC, t.title ASC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = 1;
+            long current = now();
+            ps.setLong(index++, current);
+            ps.setLong(index++, current);
+            ps.setLong(index++, current);
+            ps.setLong(index++, current);
+            index = bindPlayFilters(ps, index, guildId, range, source, null);
+            index = bindUserList(ps, index, userIds);
+            ps.setInt(index, limit);
+            List<StatsRow> rows = new ArrayList<>();
+            try(ResultSet rs = ps.executeQuery())
+            {
+                while(rs.next())
+                    rows.add(new StatsRow(rs.getLong("id"), safeLabel(rs.getString("title"), "Unknown track"), rs.getString("author"), rs.getLong("listens"), rs.getLong("listen_ms")));
+            }
+            return rows;
+        }
+    }
+
+    private List<StatsRow> topUsersFromPlaySessions(long guildId, StatsTimeRange range, String source, Long userId, int limit) throws SQLException
+    {
+        StringBuilder sql = new StringBuilder("SELECT ps.requested_by user_id, " + userLabelSql("ps.requested_by", "ps.guild_id") + " label, COUNT(*) plays "
+                + "FROM play_sessions ps JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=? AND ps.requested_by<>0");
+        appendPlayFilters(sql, range, source, userId);
+        sql.append(" GROUP BY ps.requested_by ORDER BY plays DESC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = bindPlayFilters(ps, 1, guildId, range, source, userId);
+            ps.setInt(index, limit);
+            return readCountRows(ps, "user_id", "label", "plays");
+        }
+    }
+
+    private List<StatsRow> topListeners(long guildId, StatsTimeRange range, String source, Long userId, int limit) throws SQLException
+    {
+        String upperBound = boundedListenerUpperExpression();
+        StringBuilder sql = new StringBuilder("SELECT ls.user_id, " + userLabelSql("ls.user_id", "ps.guild_id") + " label, "
+                + "SUM(CASE "
+                + "WHEN " + upperBound + " > MAX(ls.joined_at, COALESCE(ps.started_at, ls.joined_at)) "
+                + "THEN " + upperBound + " - MAX(ls.joined_at, COALESCE(ps.started_at, ls.joined_at)) "
+                + "ELSE 0 END) listen_ms "
+                + "FROM listener_sessions ls JOIN play_sessions ps ON ls.play_session_id=ps.id JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, source, null);
+        if(userId != null)
+            sql.append(" AND ls.user_id=?");
+        sql.append(" GROUP BY ls.user_id ORDER BY listen_ms DESC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = 1;
+            long current = now();
+            ps.setLong(index++, current);
+            ps.setLong(index++, current);
+            ps.setLong(index++, current);
+            ps.setLong(index++, current);
+            index = bindPlayFilters(ps, index, guildId, range, source, null);
+            if(userId != null)
+                ps.setLong(index++, userId);
+            ps.setInt(index, limit);
+            List<StatsRow> rows = new ArrayList<>();
+            try(ResultSet rs = ps.executeQuery())
+            {
+                while(rs.next())
+                    rows.add(new StatsRow(rs.getLong("user_id"), userLabel(rs.getString("label"), rs.getLong("user_id")), null, 0L, rs.getLong("listen_ms")));
+            }
+            return rows;
+        }
+    }
+
+    private List<StatsRow> topSources(long guildId, StatsTimeRange range, Long userId, int limit) throws SQLException
+    {
+        StringBuilder sql = new StringBuilder("SELECT t.source, COUNT(*) plays FROM play_sessions ps JOIN tracks t ON ps.track_id=t.id WHERE ps.guild_id=?");
+        appendPlayFilters(sql, range, null, userId);
+        sql.append(" GROUP BY t.source ORDER BY plays DESC, t.source ASC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = bindPlayFilters(ps, 1, guildId, range, null, userId);
+            ps.setInt(index, limit);
+            List<StatsRow> rows = new ArrayList<>();
+            try(ResultSet rs = ps.executeQuery())
+            {
+                while(rs.next())
+                    rows.add(new StatsRow(0L, safeLabel(rs.getString("source"), "unknown"), null, rs.getLong("plays"), 0L));
+            }
+            return rows;
+        }
+    }
+
+    private List<StatsRow> topSkippers(long guildId, StatsTimeRange range, String source, Long userId, boolean votes, int limit) throws SQLException
+    {
+        StringBuilder sql = new StringBuilder("SELECT qe.user_id, " + userLabelSql("qe.user_id", "qe.guild_id") + " label, COUNT(*) skips "
+                + "FROM queue_events qe LEFT JOIN tracks t ON qe.track_id=t.id WHERE qe.guild_id=? AND qe.user_id<>0");
+        if(votes)
+            sql.append(" AND qe.event_type='SKIP_VOTE'");
+        else
+            sql.append(" AND qe.event_type LIKE 'SKIP_%' AND qe.event_type<>'SKIP_VOTE'");
+        appendQueueFilters(sql, range, source, userId);
+        sql.append(" GROUP BY qe.user_id ORDER BY skips DESC LIMIT ?");
+        try(PreparedStatement ps = connection.prepareStatement(sql.toString()))
+        {
+            int index = bindQueueFilters(ps, 1, guildId, range, source, userId);
+            ps.setInt(index, limit);
+            return readCountRows(ps, "user_id", "label", "skips");
+        }
+    }
+
+    private List<StatsRow> readCountRows(PreparedStatement ps, String idColumn, String labelColumn, String countColumn) throws SQLException
+    {
+        List<StatsRow> rows = new ArrayList<>();
+        try(ResultSet rs = ps.executeQuery())
+        {
+            while(rs.next())
+            {
+                long id = rs.getLong(idColumn);
+                rows.add(new StatsRow(id, userLabel(rs.getString(labelColumn), id), null, rs.getLong(countColumn), 0L));
+            }
+        }
+        return rows;
+    }
+
+    private void appendPlayFilters(StringBuilder sql, StatsTimeRange range, String source, Long userId)
+    {
+        if(range != null && range.getStartMillis() != null)
+            sql.append(" AND ps.started_at>=?");
+        if(range != null && range.getEndMillis() != null)
+            sql.append(" AND ps.started_at<?");
+        if(source != null)
+            sql.append(" AND t.source=?");
+        if(userId != null)
+            sql.append(" AND ps.requested_by=?");
+    }
+
+    private int bindPlayFilters(PreparedStatement ps, int index, long guildId, StatsTimeRange range, String source, Long userId) throws SQLException
+    {
+        ps.setLong(index++, guildId);
+        if(range != null && range.getStartMillis() != null)
+            ps.setLong(index++, range.getStartMillis());
+        if(range != null && range.getEndMillis() != null)
+            ps.setLong(index++, range.getEndMillis());
+        if(source != null)
+            ps.setString(index++, source);
+        if(userId != null)
+            ps.setLong(index++, userId);
+        return index;
+    }
+
+    private void appendQueueFilters(StringBuilder sql, StatsTimeRange range, String source, Long userId)
+    {
+        if(range != null && range.getStartMillis() != null)
+            sql.append(" AND qe.created_at>=?");
+        if(range != null && range.getEndMillis() != null)
+            sql.append(" AND qe.created_at<?");
+        if(source != null)
+            sql.append(" AND t.source=?");
+        if(userId != null)
+            sql.append(" AND qe.user_id=?");
+    }
+
+    private int bindQueueFilters(PreparedStatement ps, int index, long guildId, StatsTimeRange range, String source, Long userId) throws SQLException
+    {
+        ps.setLong(index++, guildId);
+        if(range != null && range.getStartMillis() != null)
+            ps.setLong(index++, range.getStartMillis());
+        if(range != null && range.getEndMillis() != null)
+            ps.setLong(index++, range.getEndMillis());
+        if(source != null)
+            ps.setString(index++, source);
+        if(userId != null)
+            ps.setLong(index++, userId);
+        return index;
+    }
+
+    private void appendUserListFilter(StringBuilder sql, String column, List<Long> userIds)
+    {
+        if(userIds == null || userIds.isEmpty())
+            return;
+        sql.append(" AND ").append(column).append(" IN (");
+        for(int i = 0; i < userIds.size(); i++)
+        {
+            if(i > 0)
+                sql.append(",");
+            sql.append("?");
+        }
+        sql.append(")");
+    }
+
+    private int bindUserList(PreparedStatement ps, int index, List<Long> userIds) throws SQLException
+    {
+        if(userIds == null)
+            return index;
+        for(Long userId : userIds)
+            ps.setLong(index++, userId);
+        return index;
+    }
+
+    private String userLabelSql(String userIdExpression, String guildIdExpression)
+    {
+        return "(SELECT COALESCE(nickname, username) FROM user_profiles up WHERE up.user_id=" + userIdExpression + " AND up.guild_id=" + guildIdExpression + " ORDER BY seen_at DESC LIMIT 1)";
+    }
+
+    private String boundedListenerUpperExpression()
+    {
+        String fallbackEnd = "COALESCE(ps.ended_at, CASE "
+                + "WHEN ps.duration_ms IS NOT NULL THEN COALESCE(ps.started_at, ls.joined_at) + ps.duration_ms "
+                + "WHEN t.is_stream=0 AND t.length_ms IS NOT NULL THEN COALESCE(ps.started_at, ls.joined_at) + t.length_ms "
+                + "ELSE ? END)";
+        return "MIN(COALESCE(ls.left_at, " + fallbackEnd + "), " + fallbackEnd + ")";
+    }
+
+    private String userLabel(String label, long userId)
+    {
+        return safeLabel(label, "<@" + userId + ">");
+    }
+
+    private String safeLabel(String label, String fallback)
+    {
+        return label == null || label.trim().isEmpty() ? fallback : label;
+    }
+
     private static long now()
     {
         return Instant.now().toEpochMilli();
@@ -624,6 +1088,11 @@ public class DataLogService
         if(a == null || b == null)
             return false;
         return a.equals(b);
+    }
+
+    private interface SqlSupplier<T>
+    {
+        T get() throws SQLException;
     }
 
 }

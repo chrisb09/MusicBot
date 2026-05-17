@@ -148,6 +148,21 @@ dblog.jdbc_url = "jdbc:sqlite:musicbot.db"
 
 This creates a local SQLite database file and records queue, playback, listener, and command activity.
 
+When analytics are enabled, the `stats` command can show server, personal, track, source, and skip reports:
+
+```text
+stats server month
+stats me week source:youtube
+stats track
+stats tracks 60d limit:20 userlist:[alice,bob]
+stats listened 1y users:alice
+stats reports set #music-stats monthly
+stats reports now 2026-04
+stats reports now 2025
+```
+
+Personal member reports are self-only unless the requester has Manage Server. Scheduled reports are Discord embeds; graphic rewind images are not generated yet.
+
 ## Windows Note
 
 If you run the bot directly on Windows rather than in Docker, install Java first and consider a service wrapper such as [NSSM](http://nssm.cc/) if you want it to run in the background.

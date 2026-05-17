@@ -65,6 +65,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     
     private AudioFrame lastFrame;
     private AbstractQueue<QueuedTrack> queue;
+    private volatile String playCountTrackIdentifier;
+    private volatile long currentTrackServerPlayCount = -1L;
 
     protected AudioHandler(PlayerManager manager, Guild guild, AudioPlayer player)
     {
@@ -239,6 +241,13 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
             String searchQuery = rm.queueInfo == null ? null : rm.queueInfo.searchQuery;
             String playlistName = rm.queueInfo == null ? null : rm.queueInfo.playlistName;
             manager.getBot().getDataLogService().logPlayStart(guild(manager.getBot().getJDA()), track, rm, source, searchQuery, playlistName);
+            playCountTrackIdentifier = track.getIdentifier();
+            currentTrackServerPlayCount = manager.getBot().getDataLogService().getGuildTrackPlayCount(guild(manager.getBot().getJDA()), track);
+        }
+        else
+        {
+            playCountTrackIdentifier = null;
+            currentTrackServerPlayCount = -1L;
         }
     }
 
@@ -286,6 +295,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
                     + " "+FormatUtil.progressBar(progress)
                     + " `[" + TimeUtil.formatTime(track.getPosition()) + "/" + TimeUtil.formatTime(track.getDuration()) + "]` "
                     + FormatUtil.volumeIcon(audioPlayer.getVolume()));
+            if(currentTrackServerPlayCount > 0L && track.getIdentifier().equals(playCountTrackIdentifier))
+                eb.addField("Server plays", "Played " + currentTrackServerPlayCount + " time" + (currentTrackServerPlayCount == 1L ? "" : "s") + " on this server", false);
             
             return mb.setEmbeds(eb.build()).build();
         }
@@ -341,6 +352,9 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
                     .append(" `[").append(TimeUtil.formatTime(track.getPosition()))
                     .append("/").append(TimeUtil.formatTime(track.getDuration())).append("]` ")
                     .append(FormatUtil.volumeIcon(audioPlayer.getVolume()));
+            if(currentTrackServerPlayCount > 0L && track.getIdentifier().equals(playCountTrackIdentifier))
+                desc.append("\nPlayed ").append(currentTrackServerPlayCount).append(" time")
+                        .append(currentTrackServerPlayCount == 1L ? "" : "s").append(" on this server");
         }
         else
         {
