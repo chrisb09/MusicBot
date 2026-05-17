@@ -214,6 +214,7 @@ public class JMusicBot
                 .addCommands(aboutCommand,
                         new LoggedPingCmd(bot),
                         new SettingsCmd(bot),
+                        new StatsCmd(bot),
                         
                         new LyricsCmd(bot),
                         new NowplayingCmd(bot),

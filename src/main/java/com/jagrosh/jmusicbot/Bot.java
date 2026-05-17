@@ -24,6 +24,7 @@ import com.jagrosh.jmusicbot.audio.NowplayingHandler;
 import com.jagrosh.jmusicbot.audio.PlayerManager;
 import com.jagrosh.jmusicbot.audio.StatusMessageHandler;
 import com.jagrosh.jmusicbot.datalog.DataLogService;
+import com.jagrosh.jmusicbot.datalog.StatsReportScheduler;
 import com.jagrosh.jmusicbot.gui.GUI;
 import com.jagrosh.jmusicbot.playlist.PlaylistLoader;
 import com.jagrosh.jmusicbot.settings.SettingsManager;
@@ -49,6 +50,7 @@ public class Bot
     private final StatusMessageHandler statusMessageHandler;
     private final AloneInVoiceHandler aloneInVoiceHandler;
     private final DataLogService dataLogService;
+    private final StatsReportScheduler statsReportScheduler;
     private final YoutubeOauth2TokenHandler youTubeOauth2TokenHandler;
     
     private boolean shuttingDown = false;
@@ -85,6 +87,8 @@ public class Bot
             }
         }
         this.dataLogService = dls;
+        this.statsReportScheduler = new StatsReportScheduler(this);
+        this.statsReportScheduler.init();
     }
     
     public BotConfig getConfig()
@@ -135,6 +139,11 @@ public class Bot
     public DataLogService getDataLogService()
     {
         return dataLogService;
+    }
+
+    public StatsReportScheduler getStatsReportScheduler()
+    {
+        return statsReportScheduler;
     }
 
     public YoutubeOauth2TokenHandler getYouTubeOauth2Handler()

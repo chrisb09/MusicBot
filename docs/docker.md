@@ -72,6 +72,8 @@ dblog.jdbc_url = "jdbc:sqlite:musicbot.db"
 
 make sure the database file lives somewhere inside your mounted persistent config or data path if you want it to survive container recreation.
 
+The `stats` command and scheduled server rewind embeds read from this database, so reports only include activity logged after analytics were enabled.
+
 ## YouTube Token Notes In Docker
 
 If you use YouTube login or PO token based configuration, keep those values in your persistent mounted config rather than baking them into the image.

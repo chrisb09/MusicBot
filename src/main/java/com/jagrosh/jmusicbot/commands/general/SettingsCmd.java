@@ -58,7 +58,9 @@ public class SettingsCmd extends LoggedCommand
                 .put("has_custom_prefix", s.getPrefix() != null)
                 .put("has_text_channel", s.getTextChannel(event.getGuild()) != null)
                 .put("has_voice_channel", s.getVoiceChannel(event.getGuild()) != null)
-                .put("has_dj_role", s.getRole(event.getGuild()) != null);
+                .put("has_dj_role", s.getRole(event.getGuild()) != null)
+                .put("stats_report_frequency", s.getStatsReportFrequency().name())
+                .put("has_stats_report_channel", s.getStatsReportChannel(event.getGuild()) != null);
         CommandLogContext.setMeta(meta);
         MessageCreateBuilder builder = new MessageCreateBuilder()
                 .addContent(EMOJI + " **")
@@ -66,6 +68,7 @@ public class SettingsCmd extends LoggedCommand
                 .addContent("** settings:");
         TextChannel tchan = s.getTextChannel(event.getGuild());
         VoiceChannel vchan = s.getVoiceChannel(event.getGuild());
+        TextChannel statsChannel = s.getStatsReportChannel(event.getGuild());
         Role role = s.getRole(event.getGuild());
         EmbedBuilder ebuilder = new EmbedBuilder()
                 .setColor(event.getSelfMember().getColor())
@@ -80,6 +83,8 @@ public class SettingsCmd extends LoggedCommand
                                                 ? s.getQueueType().getUserFriendlyName()
                                                 : "**"+s.getQueueType().getUserFriendlyName()+"**")
                         + "\nDefault Playlist: " + (s.getDefaultPlaylist() == null ? "None" : "**" + s.getDefaultPlaylist() + "**")
+                        + "\nStats Reports: " + (s.getStatsReportFrequency().name())
+                        + (statsChannel == null ? "" : " in " + statsChannel.getAsMention())
                         )
                 .setFooter(event.getJDA().getGuilds().size() + " servers | "
                         + event.getJDA().getGuilds().stream().filter(g -> g.getSelfMember().getVoiceState().inAudioChannel()).count()

@@ -39,8 +39,15 @@ public class Settings implements GuildSettingsProvider
     private QueueType queueType;
     private String prefix;
     private double skipRatio;
+    private long statsReportChannelId;
+    private StatsReportFrequency statsReportFrequency;
 
     public Settings(SettingsManager manager, String textId, String voiceId, String roleId, int volume, String defaultPlaylist, RepeatMode repeatMode, String prefix, double skipRatio, QueueType queueType)
+    {
+        this(manager, textId, voiceId, roleId, volume, defaultPlaylist, repeatMode, prefix, skipRatio, queueType, null, StatsReportFrequency.OFF);
+    }
+
+    public Settings(SettingsManager manager, String textId, String voiceId, String roleId, int volume, String defaultPlaylist, RepeatMode repeatMode, String prefix, double skipRatio, QueueType queueType, String statsReportChannelId, StatsReportFrequency statsReportFrequency)
     {
         this.manager = manager;
         try
@@ -73,9 +80,23 @@ public class Settings implements GuildSettingsProvider
         this.prefix = prefix;
         this.skipRatio = skipRatio;
         this.queueType = queueType;
+        try
+        {
+            this.statsReportChannelId = Long.parseLong(statsReportChannelId);
+        }
+        catch(NumberFormatException e)
+        {
+            this.statsReportChannelId = 0L;
+        }
+        this.statsReportFrequency = statsReportFrequency == null ? StatsReportFrequency.OFF : statsReportFrequency;
     }
     
     public Settings(SettingsManager manager, long textId, long voiceId, long roleId, int volume, String defaultPlaylist, RepeatMode repeatMode, String prefix, double skipRatio, QueueType queueType)
+    {
+        this(manager, textId, voiceId, roleId, volume, defaultPlaylist, repeatMode, prefix, skipRatio, queueType, 0L, StatsReportFrequency.OFF);
+    }
+
+    public Settings(SettingsManager manager, long textId, long voiceId, long roleId, int volume, String defaultPlaylist, RepeatMode repeatMode, String prefix, double skipRatio, QueueType queueType, long statsReportChannelId, StatsReportFrequency statsReportFrequency)
     {
         this.manager = manager;
         this.textId = textId;
@@ -87,6 +108,8 @@ public class Settings implements GuildSettingsProvider
         this.prefix = prefix;
         this.skipRatio = skipRatio;
         this.queueType = queueType;
+        this.statsReportChannelId = statsReportChannelId;
+        this.statsReportFrequency = statsReportFrequency == null ? StatsReportFrequency.OFF : statsReportFrequency;
     }
     
     // Getters
@@ -133,6 +156,21 @@ public class Settings implements GuildSettingsProvider
     public QueueType getQueueType()
     {
         return queueType;
+    }
+
+    public TextChannel getStatsReportChannel(Guild guild)
+    {
+        return guild == null ? null : guild.getTextChannelById(statsReportChannelId);
+    }
+
+    public long getStatsReportChannelId()
+    {
+        return statsReportChannelId;
+    }
+
+    public StatsReportFrequency getStatsReportFrequency()
+    {
+        return statsReportFrequency;
     }
 
     @Override
@@ -193,6 +231,18 @@ public class Settings implements GuildSettingsProvider
     public void setQueueType(QueueType queueType)
     {
         this.queueType = queueType;
+        this.manager.writeSettings();
+    }
+
+    public void setStatsReportChannel(TextChannel channel)
+    {
+        this.statsReportChannelId = channel == null ? 0L : channel.getIdLong();
+        this.manager.writeSettings();
+    }
+
+    public void setStatsReportFrequency(StatsReportFrequency frequency)
+    {
+        this.statsReportFrequency = frequency == null ? StatsReportFrequency.OFF : frequency;
         this.manager.writeSettings();
     }
 }
