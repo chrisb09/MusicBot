@@ -6,6 +6,8 @@ A self-hosted Discord music bot fork based on JMusicBot, updated to keep working
 
 This repository keeps the bot practical to run today, while also adding fork-specific features such as status messages and playback analytics logging. Possibly more.
 
+Also, we somewhat regularly bump  [lavaplayer](https://mvnrepository.com/artifact/dev.arbjerg/lavaplayer)/[lavalink](https://maven.lavalink.dev/#/releases/dev/lavalink/youtube/common) to their new versions. I will try to update this automatically in the future.
+
 ## Demo
 
 Temporary invite: [discord.gg/4cp9CvjwaW](https://discord.gg/4cp9CvjwaW)  
