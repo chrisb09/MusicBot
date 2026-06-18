@@ -25,9 +25,9 @@ Permanent invite: [discord.gg/hK95396uB3](https://discord.gg/hK95396uB3)
 
 ## Quick Links
 
-- Fork changes and version notes: [docs/fork-changelog.md](/git/MusicBot/docs/fork-changelog.md)
-- Setup guide: [docs/setup.md](/git/MusicBot/docs/setup.md)
-- Docker usage: [docs/docker.md](/git/MusicBot/docs/docker.md)
+- Fork changes and version notes: [docs/fork-changelog.md](/docs/fork-changelog.md)
+- Setup guide: [docs/setup.md](/docs/setup.md)
+- Docker usage: [docs/docker.md](/docs/docker.md)
 
 ## Features
 
@@ -70,13 +70,13 @@ If you only need the essentials:
 3. Configure `config.txt`.
 4. Run the jar directly or use Docker.
 
-For the detailed version, see [docs/setup.md](/git/MusicBot/docs/setup.md).
+For the detailed version, see [docs/setup.md](/docs/setup.md).
 
 ## Docker
 
 A Docker image is published here: [docker.io/chrisb09/jmusicbot](https://hub.docker.com/r/chrisb09/jmusicbot)
 
-For compose examples and deployment notes, see [docs/docker.md](/git/MusicBot/docs/docker.md).
+For compose examples and deployment notes, see [docs/docker.md](/docs/docker.md).
 
 ## YouTube Login
 
@@ -90,15 +90,15 @@ youtubeoauth2=true
 
 Do not use your main Google account. Use a burner or otherwise disposable account instead.
 
-More details are in [docs/setup.md](/git/MusicBot/docs/setup.md).
+More details are in [docs/setup.md](/docs/setup.md).
 
-If you use PO tokens or visitor data for YouTube, those details are also covered in [docs/setup.md](/git/MusicBot/docs/setup.md).
+If you use PO tokens or visitor data for YouTube, those details are also covered in [docs/setup.md](/docs/setup.md).
 
 ## DAVE / Voice Encryption
 
 Discord currently requires DAVE for voice on modern API versions. This fork configures `libdave-jvm` during startup and bundles native binaries for common Linux, Windows, and macOS targets.
 
-If you deploy on an unsupported architecture, add the matching native dependency in [pom.xml](/git/MusicBot/pom.xml). You probably need to build the library from source for your architecture, so have fun with that.
+If you deploy on an unsupported architecture, add the matching native dependency in [pom.xml](/pom.xml). You probably need to build the library from source for your architecture, so have fun with that.
 
 ## Upstream And Related Work
 
@@ -119,4 +119,4 @@ If you run into issues, please include:
 - relevant config changes
 - relevant logs
 
-Fork-specific version notes live in [docs/fork-changelog.md](/git/MusicBot/docs/fork-changelog.md), which should help with troubleshooting and migration as the fork evolves.
+Fork-specific version notes live in [docs/fork-changelog.md](/docs/fork-changelog.md), which should help with troubleshooting and migration as the fork evolves.
