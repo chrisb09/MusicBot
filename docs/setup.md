@@ -115,8 +115,11 @@ If you run on an unsupported architecture, add the correct native `libdave-jvm` 
 Bundled native targets include:
 
 - Linux glibc x86_64
+- Linux glibc aarch64
 - Linux musl x86_64
+- Linux musl aarch64
 - Windows x86_64
+- Windows aarch64
 - macOS
 
 ## Status Messages

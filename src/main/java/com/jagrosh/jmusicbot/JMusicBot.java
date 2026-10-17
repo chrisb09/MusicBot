@@ -188,7 +188,7 @@ public class JMusicBot
         catch(Throwable ex)
         {
             throw new IllegalStateException("Unable to initialize DAVE protocol support via libdave-jvm. "
-                    + "Verify native dependencies are present for this platform (Linux glibc/musl x86_64, Windows x86_64, or macOS).", ex);
+                    + "Verify native dependencies are present for this platform (Linux glibc/musl, Windows, or macOS).", ex);
         }
     }
     
